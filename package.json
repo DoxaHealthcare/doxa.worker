@@ -8,7 +8,7 @@
     "test": "tsx src/tests/*.test.ts",
     "dev": "nodemon --exec 'node --import tsx/esm' src/index.ts",
     "start": "tsx src/index.ts",
-    "build": "node --max-old-space-size=1536 ./node_modules/.bin/tsc && mkdir -p dist/src/email-templates && cp -r src/email-templates/* dist/src/email-templates/ && mkdir -p dist/src/docs && cp -r src/docs/* dist/src/docs/"
+    "build": "node --max-old-space-size=1536 ./node_modules/.bin/tsc && mkdir -p dist/src/email-templates && cp -r src/email-templates/* dist/src/email-templates/"
   },
   "keywords": [],
   "author": "SamsonCanon <samsoncanon2018@gmail.com>",

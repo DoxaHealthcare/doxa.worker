@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Window Expired: Generate New Payment Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body
+    style="margin: 0; padding: 20px 0; font-family: 'Inter', sans-serif; background-color: #F9F9FA; line-height: 1.5; min-height: 100vh;">
+
+    <div
+        style="width: 100%; background-color: #F2F2F2; padding: 20px 0; text-align: center; max-width: 500px; margin: 0 auto 0 auto;">
+        <div style="margin: 0 auto; max-width: 530px; width: 100%;">
+            <a href="https://doxahealth.ng/" style="text-decoration: none; display: inline-block;">
+                <img src="https://doxahealth.ng/_next/image?url=%2Flogo%2Flong-logo.png&w=256&q=90" alt="Logo"
+                    style="height: 40px; width: auto; display: block; margin: 0 auto; max-width: 100%;">
+            </a>
+        </div>
+    </div>
+
+
+    <div
+        style="background-color: white; margin: 0 auto 20px auto; padding: 50px 15px 30px; width: calc(100% - 60px); max-width: 470px;">
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            Hi {{firstName}},
+        </p>
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            The payment details generated for your consultation with Dr. {{doctorName}} have expired.
+        </p>
+
+        <div style="width: 90%; margin: 16px auto; padding-top: 12px;">
+            <p
+                style="color: #222222; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; margin: 0 0 8px 0;">
+                Consultation & Payment Summary
+            </p>
+            <ul
+                style="list-style: none; padding: 0; margin: 0; color: #5A5A5A; font-size: 14px; font-family: 'Inter', sans-serif;">
+                <li style="margin-bottom: 6px;">Date: {{date}}</li>
+                <li style="margin-bottom: 6px;">Time: {{time}} {{timezone}}</li>
+                <li style="margin-bottom: 6px;">Transaction ID: {{transactionId}}</li>
+                <li style="margin-bottom: 6px;">Expired Virtual Account: {{virtualAccountNumber}} (Bank:
+                    {{virtualBank}})</li>
+                <li style="margin-bottom: 6px;">Expired On: {{expiryDate}} at {{expiryTime}} {{timezone}}</li>
+                <li style="margin-bottom: 6px;">Amount: ₦{{amount}}</li>
+            </ul>
+        </div>
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            To continue, please generate new payment details and complete your payment to confirm your booking.
+        </p>
+
+        <a href="{{paymentDashboardLink}}"
+            style="display: block; width: 100%; text-decoration: none; margin: 12px 0 16px 0;">
+            <button
+                style="width: 100%; padding: 16px 32px; border: none; color: white; background-color: #1648CE; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;">
+                Generate New Payment Details
+            </button>
+        </a>
+
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            If you’ve already paid via a different method, please ignore this message or contact support at
+            {{supportEmail}}.
+        </p>
+
+        <p style="color: #969696; padding-top: 26px; font-family: 'Inter', sans-serif;">
+            Warm regards, <br />
+            The Doxa Healthcare Team
+        </p>
+
+
+    </div>
+    </div>
+</body>
+
+</html>

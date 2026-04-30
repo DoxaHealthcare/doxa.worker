@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{fullName}} just messaged you</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+
+<body
+    style="margin: 0; padding: 20px 0; font-family: 'Inter', sans-serif; background-color: #F9F9FA; line-height: 1.5; min-height: 100vh;">
+
+    <div
+        style="width: 100%; background-color: #F2F2F2; padding: 20px 0; text-align: center; max-width: 500px; margin: 0 auto 0 auto;">
+        <div style="margin: 0 auto; max-width: 530px; width: 100%;">
+            <a href="https://doxahealth.ng/" style="text-decoration: none; display: inline-block;">
+                <img src="https://doxahealth.ng/_next/image?url=%2Flogo%2Flong-logo.png&w=256&q=90" alt="Logo"
+                    style="height: 40px; width: auto; display: block; margin: 0 auto; max-width: 100%;">
+            </a>
+        </div>
+    </div>
+
+
+    <div
+        style="background-color: white; margin: 0 auto 20px auto; padding: 50px 15px 30px; width: calc(100% - 60px); max-width: 470px; text-align: center;">
+        <h1 style="color: black; font-size: 22px;">
+            {{unseenMessages}} new message awaits your response
+        </h1>
+        <img src="{{profileImage}}" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 100%;">
+        <p style="font-weight: 700; font-size: 16px; color: #222222;">{{fullName}}</p>
+        <div
+            style="padding-top: 14px; display: block; width: 100%; position: relative; margin: 0 auto;">
+
+            <p style="color: #969696; font-size: 14px; padding-bottom: 14px; font-family: 'Inter', sans-serif;">
+           Thanks for choosing Doxa Healthcare! To view the message, please click on the “View message” button below. 
+            </p>
+
+            <a href="http://doxahealth.ng/{{userType}}">
+                <button
+                    style="padding: 16px 24px; width: 100%; border: none; color: white; background-color: #1648CE; border-radius: 12px;">
+                    View message
+                </button>
+            </a>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

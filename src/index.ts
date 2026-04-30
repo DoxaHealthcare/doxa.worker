@@ -11,7 +11,6 @@ import {
   restorePendingTransactionExpiryJobs,
   scheduleDailyStatsJob
 } from "./utils/scheduler.js";
-// import admin from 'firebase-admin'
 
 // Configure logging
 const morganFormat = ":method :url :status :response-time ms";

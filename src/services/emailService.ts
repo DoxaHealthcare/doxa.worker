@@ -1,4 +1,3 @@
-import { SentMessageInfo } from 'nodemailer'
 import { parseTemplate } from '../utils/templateParser.js'
 import logger from '../utils/logger.js'
 import { Resend } from 'resend'
@@ -10,7 +9,7 @@ export const sendEmail = async (
   templateName: string,
   placeholders: { [key: string]: string },
   from: EmailFrom = 'noreply'
-): Promise<SentMessageInfo> => {
+): Promise<any> => {
   logger.info('Starting email send process', {
     to,
     subject,

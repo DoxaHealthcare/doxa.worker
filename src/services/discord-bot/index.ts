@@ -9,7 +9,7 @@ import logger from '../../utils/logger.js'
 
 export class DiscordBotService {
   async notifyNewConsultation(data: { name: string; doctorName: string; date: string }) {
-    const channelId = process.env.DISCORD_NEW_CONSULTATION_CHANNEL_ID
+    const channelId = process.env.DISCORD_NEW_CONSULTATION_CHANNEL_ID?.trim()
     const channel = channelId ? discordClient.channels.cache.get(channelId) : null
     if (channel && channel.type === ChannelType.GuildText) {
       const textChannel = channel as TextChannel
@@ -21,6 +21,23 @@ export class DiscordBotService {
     } else {
       logger.error(
         'Channel not text-capable or not found for new consultation message.'
+      )
+    }
+  }
+
+  async notifyNewUser(data: { name: string }) {
+    const channelId = process.env.DISCORD_NEW_USER_CHANNEL_ID?.trim()
+    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
+    if (channel && channel.type === ChannelType.GuildText) {
+      const textChannel = channel as TextChannel
+      return textChannel
+        .send(
+          `Welcome ${data.name} to Doxa! 🥳`
+        )
+        .catch((err: any) => logger.error('Failed to send message:', err))
+    } else {
+      logger.error(
+        'Channel not text-capable or not found for new user message.'
       )
     }
   }
@@ -37,7 +54,7 @@ export class DiscordBotService {
     content: string,
     payload: WithdrawalApprovalPayload
   ) {
-    const channelId = process.env.DISCORD_WALLET_WITHDRAWAL_CHANNEL_ID
+    const channelId = process.env.DISCORD_WALLET_WITHDRAWAL_CHANNEL_ID?.trim()
 
     if (channelId)
       return sendWithdrawalApprovalPrompt(channelId, content, payload)
@@ -45,7 +62,7 @@ export class DiscordBotService {
   }
 
   async sendLogMessage (content: string) {
-    const channelId = process.env.DISCORD_LOGS_CHANNEL_ID
+    const channelId = process.env.DISCORD_LOGS_CHANNEL_ID?.trim()
     const channel = channelId ? discordClient.channels.cache.get(channelId) : null
     if (channel && channel.type === ChannelType.GuildText) {
       const textChannel = channel as TextChannel
@@ -88,6 +105,9 @@ export class DiscordBotService {
                 case 'NOTIFY_NEW_CONSULTATION':
                   await this.notifyNewConsultation(task.payload)
                   break
+                case 'NOTIFY_NEW_USER':
+                  await this.notifyNewUser(task.payload)
+                  break
                 case 'SEND_APPROVAL_PROMPT':
                   await this.sendApprovalPrompt(task.payload.channelId, task.payload.content, task.payload.payload)
                   break
@@ -98,7 +118,7 @@ export class DiscordBotService {
                   await this.sendLogMessage(task.payload.content)
                   break
                 default:
-                  logger.warn(`Unknown Discord task type: ${task.type}`, { taskId })
+                  throw new Error(`Unknown Discord task type: ${task.type}`)
               }
               
               await updateDBAdmin('discord-tasks', taskId, {

@@ -1,4 +1,5 @@
 import "dotenv/config";
+process.env.TZ = "Africa/Lagos";
 import express from "express";
 import morgan from "morgan";
 import logger from "./utils/logger.js";
@@ -68,8 +69,13 @@ const setupCleanupHandlers = () => {
 async function startServer() {
   try {
     const startTime = new Date();
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    logger.info(`Server starting at: ${startTime.toLocaleString()} (Timezone: ${timeZone})`);
+    const serverTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const nigeriaTime = startTime.toLocaleString("en-GB", { timeZone: "Africa/Lagos" });
+    
+    logger.info(`Server starting...`);
+    logger.info(`Server Timezone: ${serverTimeZone}`);
+    logger.info(`Current Server Time: ${startTime.toLocaleString()}`);
+    logger.info(`Current Nigeria Time: ${nigeriaTime}`);
 
     const app = express();
     if (process.env.DISTOKEN) {

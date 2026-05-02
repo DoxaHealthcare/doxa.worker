@@ -67,6 +67,10 @@ const setupCleanupHandlers = () => {
 
 async function startServer() {
   try {
+    const startTime = new Date();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    logger.info(`Server starting at: ${startTime.toLocaleString()} (Timezone: ${timeZone})`);
+
     const app = express();
     if (process.env.DISTOKEN) {
       discordClient.login(process.env.DISTOKEN).then(() => {

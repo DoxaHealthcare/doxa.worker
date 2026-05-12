@@ -13,6 +13,9 @@ export const createDBAdmin = async (
   data: DocumentData
 ): Promise<DatabaseResponse> => {
   try {
+    if (!docId) {
+      return { success: false, error: 'Document ID is required' }
+    }
     const db = getAdminFirestore()
     await db.collection(collectionName).doc(docId).set(data)
     return { success: true }
@@ -28,6 +31,9 @@ export const updateDBAdmin = async (
   data: Partial<DocumentData>
 ): Promise<DatabaseResponse> => {
   try {
+    if (!docId) {
+      return { success: false, error: 'Document ID is required' }
+    }
     const db = getAdminFirestore()
     await db.collection(collectionName).doc(docId).update(data)
     return { success: true }
@@ -42,6 +48,9 @@ export const getDBAdmin = async (
   docId: string
 ): Promise<DatabaseResponse> => {
   try {
+    if (!docId) {
+      return { success: false, error: 'Document ID is required' }
+    }
     const db = getAdminFirestore()
     const doc = await db.collection(collectionName).doc(docId).get()
 
@@ -61,6 +70,9 @@ export const deleteDBAdmin = async (
   docId: string
 ): Promise<DatabaseResponse> => {
   try {
+    if (!docId) {
+      return { success: false, error: 'Document ID is required' }
+    }
     const db = getAdminFirestore()
     await db.collection(collectionName).doc(docId).delete()
     return { success: true }
@@ -75,6 +87,9 @@ export const checkIsExistsDBAdmin = async (
   docId: string
 ): Promise<boolean> => {
   try {
+    if (!docId) {
+      return false
+    }
     const db = getAdminFirestore()
     const doc = await db.collection(collectionName).doc(docId).get()
     return doc.exists

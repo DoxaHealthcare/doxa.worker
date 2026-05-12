@@ -43,6 +43,20 @@ export const sendEmail = async (
       apiKeyPrefix: apiKey ? `${apiKey.substring(0, 5)}...` : 'none'
     })
 
+    // Skip sending email in development environment
+    if (process.env.NODE_ENV === 'development') {
+      logger.info('DEVELOPMENT MODE: Email sending skipped', {
+        to,
+        subject,
+        templateName,
+        placeholders
+      })
+      return {
+        messageId: 'dev-mode-skip-id',
+        success: true
+      }
+    }
+
     if (!apiKey) {
       logger.error('RESEND_API_KEY is not set in environment variables')
       throw new Error('Missing RESEND_API_KEY')

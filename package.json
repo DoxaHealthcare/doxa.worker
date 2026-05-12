@@ -13,7 +13,7 @@
   "keywords": [],
   "author": "SamsonCanon <samsoncanon2018@gmail.com>",
   "license": "ISC",
-  "repository": "git@github.com:CanonSamson/doxa.backend.git",
+  "repository": "git@github.com:CanonSamson/doxa.worker.git",
   "dependencies": {
       "discord.js": "^14.23.2",
       "dotenv": "^16.4.7",

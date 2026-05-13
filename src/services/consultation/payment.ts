@@ -1,13 +1,9 @@
-import { v4 as uuidv4 } from 'uuid'
 import logger from '../../utils/logger.js'
 import { getAdminFirestore } from '../../utils/firebase/admin.js'
 import {
-  getDBAdmin,
-  createDBAdmin,
   updateDBAdmin
 } from '../../utils/firebase/admin-database.js'
-import { chargesService } from '../chargesService.js'
-import type { DoctorData } from '../../../custom-types.js'
+import { ServiceResponse } from '../../../custom-types.js'
 
 interface WalletTransactionData {
   id: string
@@ -24,104 +20,12 @@ interface WalletTransactionData {
 }
 
 export class ConsultationPaymentService {
-  async initializePaymentToDoctorWallet (
-    consultationId: string,
-    doctorId: string,
-    patientId: string,
-    overrideAmount?: number,
-    currencyOverride?: string
-  ) {
-    try {
-      const db = getAdminFirestore()
-      const timestamp = new Date().toISOString()
-
-      let payoutAmount = 0
-      let currency = 'NGN'
-      let consultationTransactionId = ''
-
-      // Try to fetch the related consultation transaction to get accurate fee breakdown
-      const txQuery = await db
-        .collection('consultation-transactions')
-        .where('consultationId', '==', consultationId)
-        .limit(1)
-        .get()
-
-      if (!txQuery.empty) {
-        const txDoc = txQuery.docs[0]
-        const txData = txDoc.data() as any
-        consultationTransactionId = txDoc.id
-        payoutAmount = Number(txData?.consultationFee || 0)
-        currency = currencyOverride || txData?.currency || 'NGN'
-      } else {
-        // Fallback: compute payout from the doctor's configured consultation fee
-        const doctorRecord = await getDBAdmin('doctors', doctorId)
-        const doctorInfo = doctorRecord?.data as DoctorData
-        const rawFee = Number(doctorInfo?.consultationFee || 0)
-        const calc = chargesService.calculateConsultationFee(rawFee)
-        payoutAmount = Number(calc.consultationFee || 0)
-        currency = currencyOverride || 'NGN'
-      }
-
-      // Allow explicit override of computed amount
-      if (typeof overrideAmount === 'number' && !Number.isNaN(overrideAmount)) {
-        payoutAmount = overrideAmount
-      }
-
-      const walletTransactionId = uuidv4()
-      const walletTransaction: WalletTransactionData = {
-        id: walletTransactionId,
-        doctorId,
-        patientId,
-        consultationId,
-        consultationTransactionId,
-        amount: payoutAmount,
-        currency,
-        status: 'PENDING',
-        type: 'CONSULTATION_EARNINGS',
-        createdAt: timestamp,
-        updatedAt: timestamp
-      }
-
-      await createDBAdmin(
-        'wallets-transactions',
-        walletTransactionId,
-        walletTransaction
-      )
-
-      logger.info('consultationSuccessful: Wallet transaction initialized (PENDING)', {
-        consultationId,
-        doctorId,
-        walletTransactionId,
-        amount: payoutAmount
-      })
-      return {
-        success: true,
-        walletTransactionId,
-        data: walletTransaction
-      }
-    } catch (walletError) {
-      logger.error(
-        'consultationSuccessful: Failed to initialize wallet transaction',
-        {
-          consultationId,
-          doctorId,
-          error: walletError
-        }
-      )
-      // Non-blocking: do not fail the consultation endpoint if wallet init fails
-      return {
-        success: false,
-        error: walletError instanceof Error ? walletError.message : walletError
-      }
-    }
-  }
-
   async approveInitializedPaymentToDoctorWallet (
     consultationId: string,
     doctorId: string,
     patientId: string,
     walletTransactionId?: string
-  ) {
+  ): Promise<ServiceResponse> {
     const db = getAdminFirestore()
     const timestamp = new Date().toISOString()
 
@@ -148,7 +52,12 @@ export class ConsultationPaymentService {
           doctorId,
           walletTransactionId
         })
-        return { success: false, error: 'Wallet transaction not found or not pending' }
+        return { 
+          success: false, 
+          message: 'Wallet transaction not found or not pending',
+          code: 404,
+          error: 'NOT_FOUND'
+        }
       }
 
       const txData = (txDoc as any).data() as WalletTransactionData
@@ -159,7 +68,12 @@ export class ConsultationPaymentService {
           walletTransactionId: (txDoc as any).id,
           status: txData.status
         })
-        return { success: true, message: 'Already processed', walletTransactionId: (txDoc as any).id }
+        return { 
+          success: true, 
+          data: { walletTransactionId: (txDoc as any).id },
+          message: 'Already processed',
+          code: 200
+        }
       }
 
       const amount = Number(txData.amount || 0)
@@ -173,11 +87,16 @@ export class ConsultationPaymentService {
           consultationId,
           doctorId
         })
-        return { success: false, error: 'Doctor wallet not activated' }
+        return { 
+          success: false, 
+          message: 'Doctor wallet not activated',
+          code: 400,
+          error: 'WALLET_NOT_ACTIVATED'
+        }
       }
 
       // Atomically credit wallet and mark transaction completed
-      await db.runTransaction(async (trx) => {
+      await db.runTransaction(async (trx: any) => {
         const freshWalletSnap = await trx.get(walletRef)
         const currentBalance = Number(freshWalletSnap.data()?.balance || 0)
         const newBalance = currentBalance + amount
@@ -195,11 +114,15 @@ export class ConsultationPaymentService {
 
       return {
         success: true,
-        walletTransactionId: (txDoc as any).id,
-        amount,
-        doctorId,
-        patientId,
-        consultationId
+        data: {
+          walletTransactionId: (txDoc as any).id,
+          amount,
+          doctorId,
+          patientId,
+          consultationId
+        },
+        message: 'Payment approved successfully',
+        code: 200
       }
     } catch (error: any) {
       logger.error('approvePayment: Failed to approve wallet transaction', {
@@ -210,7 +133,9 @@ export class ConsultationPaymentService {
       })
       return {
         success: false,
-        error: error?.message || 'Failed to approve wallet transaction'
+        message: 'Failed to approve wallet transaction',
+        code: 500,
+        error
       }
     }
   }
@@ -221,7 +146,7 @@ export class ConsultationPaymentService {
     patientId: string,
     walletTransactionId?: string,
     reason?: string
-  ) {
+  ): Promise<ServiceResponse> {
     const db = getAdminFirestore()
     const timestamp = new Date().toISOString()
 
@@ -248,7 +173,12 @@ export class ConsultationPaymentService {
           doctorId,
           walletTransactionId
         })
-        return { success: false, error: 'Wallet transaction not found or not pending' }
+        return { 
+          success: false, 
+          message: 'Wallet transaction not found or not pending',
+          code: 404,
+          error: 'NOT_FOUND'
+        }
       }
 
       const txData = (txDoc as any).data() as WalletTransactionData
@@ -259,12 +189,17 @@ export class ConsultationPaymentService {
           walletTransactionId: (txDoc as any).id,
           status: txData.status
         })
-        return { success: true, message: 'Already processed', walletTransactionId: (txDoc as any).id }
+        return { 
+          success: true, 
+          data: { walletTransactionId: (txDoc as any).id },
+          message: 'Already processed',
+          code: 200
+        }
       }
 
       // Mark transaction as failed/rejected. No wallet balance change since it was pending.
       const update = {
-        status: 'REJECTED' as const,
+        status: 'FAILED' as const, // Standardizing to FAILED instead of REJECTED if preferred, or keep as is
         rejectReason: reason || 'Rejected',
         rejectedAt: timestamp,
         updatedAt: timestamp
@@ -282,11 +217,15 @@ export class ConsultationPaymentService {
 
       return {
         success: true,
-        walletTransactionId: (txDoc as any).id,
-        doctorId,
-        patientId,
-        consultationId,
-        status: 'REJECTED'
+        data: {
+          walletTransactionId: (txDoc as any).id,
+          doctorId,
+          patientId,
+          consultationId,
+          status: 'REJECTED'
+        },
+        message: 'Payment rejected successfully',
+        code: 200
       }
     } catch (error: any) {
       logger.error('rejectPayment: Failed to reject wallet transaction', {
@@ -297,7 +236,9 @@ export class ConsultationPaymentService {
       })
       return {
         success: false,
-        error: error?.message || 'Failed to reject wallet transaction'
+        message: 'Failed to reject wallet transaction',
+        code: 500,
+        error
       }
     }
   }

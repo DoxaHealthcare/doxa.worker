@@ -73,6 +73,14 @@ export interface OTPData {
   verifiedAt?: string
 }
 
+export interface ServiceResponse<T = any> {
+  success: boolean
+  data?: T
+  message?: string
+  code: number
+  error?: any
+}
+
 declare module 'node-schedule' {
   export interface Job {
     cancel(): boolean

@@ -1,13 +1,20 @@
+import { ServiceResponse } from '../../custom-types.js'
+
 export class ChargesService {
-  calculateConsultationFee (consultationFee: number) {
+  calculateConsultationFee(consultationFee: number): ServiceResponse {
     const percent = 30
     const doxahealthFee = (consultationFee * percent) / 100
 
     return {
-      percent,
-      doxahealthFee,
-      total: consultationFee,
-      consultationFee: consultationFee - doxahealthFee
+      success: true,
+      data: {
+        percent,
+        doxahealthFee,
+        total: consultationFee,
+        consultationFee: consultationFee - doxahealthFee
+      },
+      message: 'Consultation fee calculated successfully',
+      code: 200
     }
   }
 }

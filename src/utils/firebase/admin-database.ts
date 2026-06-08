@@ -35,7 +35,8 @@ export const updateDBAdmin = async (
       return { success: false, error: 'Document ID is required' }
     }
     const db = getAdminFirestore()
-    await db.collection(collectionName).doc(docId).update(data)
+    // Use set with merge: true instead of update to avoid "No document to update" errors
+    await db.collection(collectionName).doc(docId).set(data, { merge: true })
     return { success: true }
   } catch (error) {
     console.error('Error updating document:', error)

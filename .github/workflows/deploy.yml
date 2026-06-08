@@ -32,4 +32,22 @@ jobs:
             git pull origin main
             yarn install
             yarn build
-            pm2 restart 1
+            pm2 restart doxa-worker || pm2 start ecosystem.config.cjs
+
+      - name: Send Discord Notification
+        uses: appleboy/discord-action@master
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          color: "#48f442"
+          message: "🚀 **Doxa Worker** successfully deployed to DigitalOcean!"
+        if: success()
+
+      - name: Send Discord Failure Notification
+        uses: appleboy/discord-action@master
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          color: "#f44242"
+          message: "❌ **Doxa Worker** deployment failed! Please check GitHub Actions logs."
+        if: failure()

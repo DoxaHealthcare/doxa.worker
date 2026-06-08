@@ -12,6 +12,8 @@ Add these to your repository under **Settings > Secrets and variables > Actions*
 | `SSH_KEY` | **Private** SSH Key | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `DEPLOY_PATH` | Project path on server | `/root/doxa.worker` |
 | `SSH_PORT` | SSH Port (default 22) | `22` |
+| `DISCORD_WEBHOOK_ID` | Discord Webhook ID | `1513543060619919512` |
+| `DISCORD_WEBHOOK_TOKEN` | Discord Webhook Token | `dCKWoAogsyfm153iq8eRFdneXKn2V7PbtaJeKD51T2fogsZhP_GQxp9MHpvstdkWCu5V` |
 
 ---
 

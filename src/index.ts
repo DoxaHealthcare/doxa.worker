@@ -12,6 +12,9 @@ import {
   restorePendingTransactionExpiryJobs,
   scheduleDailyStatsJob
 } from "./utils/scheduler.js";
+import { getRedisUrl } from "./utils/redis.js";
+import { startRedisJobWorker } from "./utils/jobQueue.js";
+import { acquireLeaderLease } from "./utils/leaderLease.js";
 
 // Configure logging
 const morganFormat = ":method :url :status :response-time ms";
@@ -56,9 +59,10 @@ const healthCheck = async (_req: express.Request, res: express.Response) => {
 };
 
 // Cleanup handlers
-const setupCleanupHandlers = () => {
+const setupCleanupHandlers = (cleanupTasks: Array<() => Promise<void>>) => {
   const cleanup = async () => {
     logger.info("Shutting down worker...");
+    await Promise.allSettled(cleanupTasks.map(cleanupTask => cleanupTask()));
     process.exit(0);
   };
 
@@ -68,6 +72,7 @@ const setupCleanupHandlers = () => {
 
 async function startServer() {
   try {
+    const cleanupTasks: Array<() => Promise<void>> = [];
     const startTime = new Date();
     const serverTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const nigeriaTime = startTime.toLocaleString("en-GB", { timeZone: "Africa/Lagos" });
@@ -79,11 +84,21 @@ async function startServer() {
 
     const app = express();
     if (process.env.DISTOKEN) {
-      discordClient.login(process.env.DISTOKEN).then(() => {
-        discordBotService.listenToDiscordTasks();
-      }).catch((error) => {
-        logger.error("Failed to login to Discord:", error);
-      });
+      const discordLease = getRedisUrl()
+        ? await acquireLeaderLease("doxa:leader:discord")
+        : async () => {};
+
+      if (discordLease) {
+        cleanupTasks.push(discordLease);
+        discordClient.login(process.env.DISTOKEN).then(() => {
+          const unsubscribe = discordBotService.listenToDiscordTasks();
+          cleanupTasks.push(async () => unsubscribe());
+        }).catch((error) => {
+          logger.error("Failed to login to Discord:", error);
+        });
+      } else {
+        logger.info("Another worker owns the Discord listener lease");
+      }
     } else {
       logger.warn("DISTOKEN is not defined in environment variables. Discord bot will not start.");
     }
@@ -91,13 +106,19 @@ async function startServer() {
     initializeFirebaseAdmin();
     logger.info("Firebase Admin SDK initialized");
 
-    // Restore scheduled jobs after Firebase is ready
-    await Promise.all([
-      restoreUnSeenMessageJobs(),
-      restorePendingTransactionJobs(),
-      restorePendingTransactionExpiryJobs()
-    ]);
-    scheduleDailyStatsJob();
+    if (getRedisUrl()) {
+      cleanupTasks.push(await startRedisJobWorker());
+    } else {
+      logger.warn(
+        "REDIS_URL is not configured; using legacy single-instance scheduling"
+      );
+      await Promise.all([
+        restoreUnSeenMessageJobs(),
+        restorePendingTransactionJobs(),
+        restorePendingTransactionExpiryJobs()
+      ]);
+      scheduleDailyStatsJob();
+    }
 
     const PORT = process.env.PORT;
 
@@ -112,7 +133,7 @@ async function startServer() {
     app.use(errorHandler);
 
     // Setup cleanup handlers
-    setupCleanupHandlers();
+    setupCleanupHandlers(cleanupTasks);
 
     // Start server
     app.listen(PORT, () => {
@@ -125,4 +146,3 @@ async function startServer() {
 }
 
 startServer();
-

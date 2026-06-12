@@ -90,7 +90,7 @@ export class DiscordBotService {
     const db = getAdminFirestore()
     logger.info('Starting Discord task listener')
     
-    db.collection('discord-tasks')
+    return db.collection('discord-tasks')
       .where('status', '==', 'PENDING')
       .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(async change => {

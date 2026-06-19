@@ -5,6 +5,7 @@ import {
 } from '../../utils/firebase/admin.js'
 import logger from '../../utils/logger.js'
 import { sendEmail } from '../emailService.js'
+import { passwordResetService } from '../passwordReset/index.js'
 
 type DoctorOnboardInput = {
   email: string
@@ -20,7 +21,7 @@ type ServiceResult<T = any> = {
 }
 
 export class DoctorService {
-  async onboardDoctor (
+  async onboardDoctor(
     doctor: DoctorOnboardInput
   ): Promise<
     ServiceResult<{ doctorId: string; email: string; fullName: string }>
@@ -109,7 +110,7 @@ export class DoctorService {
       const targetEmail = email
       const doctorName = (fullName || 'Doctor').trim()
 
-      let resetLink: string = await auth.generatePasswordResetLink(targetEmail)
+      const resetLink = await passwordResetService.generateResetLink(doctorId)
 
       await sendEmail(
         targetEmail,

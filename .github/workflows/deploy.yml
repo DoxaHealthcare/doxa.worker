@@ -32,7 +32,7 @@ jobs:
             git pull origin main
             yarn install
             yarn build
-            pm2 restart doxa-worker || pm2 start ecosystem.config.cjs
+            pm2 restart 3
 
       - name: Send Discord Notification
         uses: appleboy/discord-action@master

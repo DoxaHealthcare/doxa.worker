@@ -257,19 +257,12 @@ export function registerDoctorOnboardingHandler () {
 }
 
 export function registerPharmacyOnboardingHandler () {
-  const channelId = process.env.DISCORD_PHARMACY_ONBOARDING_CHANNEL_ID?.trim()
-  const channelName = process.env.DISCORD_PHARMACY_ONBOARDING_CHANNEL_NAME?.trim()
+  const CHANNEL_ID = process.env.DISCORD_PHARMACY_ONBOARDING_CHANNEL_ID
 
   discordClient.on('messageCreate', async message => {
     try {
       if (message.author.bot) return
-
-      const messageChannelName = 'name' in message.channel ? message.channel.name : undefined
-      const isConfiguredChannel = channelId
-        ? message.channelId === channelId
-        : Boolean(channelName && messageChannelName === channelName)
-
-      if (!isConfiguredChannel) return
+      if (message.channelId !== CHANNEL_ID) return
 
       const {
         email,
@@ -317,7 +310,6 @@ export function registerPharmacyOnboardingHandler () {
   })
 
   logger.info('Discord pharmacy onboarding handler registered', {
-    channelId: channelId || null,
-    channelName: channelName || null
+    channelId: CHANNEL_ID || null
   })
 }

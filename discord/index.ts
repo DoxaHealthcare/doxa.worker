@@ -17,4 +17,5 @@ discordClient.on('clientReady', () => {
   console.log(`Discord client logged in as ${discordClient.user?.tag}`)
   discordBotService.registerApprovalButtonsHandler()
   discordBotService.registerDoctorOnboardingHandler()
+  discordBotService.registerPharmacyOnboardingHandler()
 })

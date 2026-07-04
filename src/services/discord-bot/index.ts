@@ -1,6 +1,10 @@
 import type { ApprovalPayload, WithdrawalApprovalPayload } from './types.js'
 import { sendApprovalPrompt, sendWithdrawalApprovalPrompt } from './prompts.js'
-import { registerApprovalButtonsHandler, registerDoctorOnboardingHandler } from './handlers.js'
+import {
+  registerApprovalButtonsHandler,
+  registerDoctorOnboardingHandler,
+  registerPharmacyOnboardingHandler
+} from './handlers.js'
 import { discordClient } from '../../../discord/index.js'
 import { ChannelType, TextChannel } from 'discord.js'
 import { getAdminFirestore } from '../../utils/firebase/admin.js'
@@ -84,6 +88,10 @@ export class DiscordBotService {
 
   registerDoctorOnboardingHandler () {
     return registerDoctorOnboardingHandler()
+  }
+
+  registerPharmacyOnboardingHandler () {
+    return registerPharmacyOnboardingHandler()
   }
 
   listenToDiscordTasks() {

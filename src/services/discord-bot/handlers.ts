@@ -126,7 +126,7 @@ export function registerApprovalButtonsHandler() {
         return safeRespond(interaction, 'Unknown interaction: missing token id.')
       }
 
-      const adminDb =  getAdminFirestore()
+      const adminDb = getAdminFirestore()
       const tokenSnap = await adminDb.collection('discord-approval-tokens').doc(tokenId).get()
       if (!tokenSnap.exists) {
         return safeRespond(interaction, 'Unknown interaction: token not found.')
@@ -177,14 +177,14 @@ export function registerApprovalButtonsHandler() {
       logger.error('Error handling Discord interaction', { error: (error as Error).message })
       try {
         await safeRespond(interaction, 'An error occurred while processing your action.')
-      } catch {}
+      } catch { }
     }
   })
 
   logger.info('Discord approval button handler registered')
 }
 
-export function registerDoctorOnboardingHandler () {
+export function registerDoctorOnboardingHandler() {
   const CHANNEL_ID = process.env.DISCORD_DOCTOR_ONBOARDING_CHANNEL_ID
 
   discordClient.on('messageCreate', async message => {
@@ -249,14 +249,14 @@ export function registerDoctorOnboardingHandler () {
       logger.error('registerDoctorOnboardingHandler: Failed handling message', { error: err?.message || String(err) })
       try {
         await message.reply('Internal error while onboarding doctor.')
-      } catch {}
+      } catch { }
     }
   })
 
   logger.info('Discord doctor onboarding handler registered')
 }
 
-export function registerPharmacyOnboardingHandler () {
+export function registerPharmacyOnboardingHandler() {
   const CHANNEL_ID = process.env.DISCORD_PHARMACY_ONBOARDING_CHANNEL_ID
 
   discordClient.on('messageCreate', async message => {
@@ -305,7 +305,7 @@ export function registerPharmacyOnboardingHandler () {
       logger.error('registerPharmacyOnboardingHandler: Failed handling message', { error: err?.message || String(err) })
       try {
         await message.reply('Internal error while onboarding pharmacy.')
-      } catch {}
+      } catch { }
     }
   })
 

@@ -50,15 +50,15 @@ export const restoreUnSeenMessageJobs = async (): Promise<void> => {
       const job = scheduleJob(scheduleDate, async (fireDate: Date) => {
         const payload = data.payload || {}
         const response = await sendUnseenMessageEmail(payload)
+        await updateDBAdmin('scheduled-jobs', id, {
+          status: 'executed',
+          executedAt: new Date().toISOString()
+        }).catch(() => {})
         logger.info('Restored unseen message job executed', {
           id,
           fireDate,
           response
         })
-        await updateDBAdmin('scheduled-jobs', id, {
-          status: 'executed',
-          executedAt: new Date().toISOString()
-        }).catch(() => {})
         // remove local restored job reference
         if (restoredJobs[id]) {
           restoredJobs[id].cancel()

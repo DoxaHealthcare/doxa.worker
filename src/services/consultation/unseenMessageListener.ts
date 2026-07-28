@@ -16,6 +16,7 @@ interface ConsultationsChatDoc {
   doctorId?: string
   seen?: Record<string, boolean>
   unseenMessages?: Record<string, number>
+  unseenEmailSent?: Record<string, boolean>
   sentat?: string
   consultationsChat?: string
   lastMessage?: string
@@ -78,6 +79,11 @@ const scheduleUnseenMessageJob = async ({
     senderId,
     receiverId
   })
+
+  await updateDBAdmin('consultations-chats', consultationsChat, {
+    [`unseenEmailSent.${receiverId}`]: false,
+    updatedAt: new Date().toISOString()
+  }).catch(() => {})
 
   await handleCancelJobs(id, maybeid)
 
@@ -153,6 +159,29 @@ export const startUnseenMessageListener = (): (() => Promise<void>) => {
   const db = getAdminFirestore()
 
   logger.info('Starting consultations-chats Firestore listener')
+
+  const seedPreviousUnseenSnapshots = async () => {
+    try {
+      const snapshot = await db.collection('consultations-chats').get()
+      snapshot.docs.forEach(doc => {
+        const data = doc.data() as ConsultationsChatDoc
+        if (data.unseenMessages) {
+          previousUnseenSnapshots.set(doc.id, { ...data.unseenMessages })
+        } else {
+          previousUnseenSnapshots.set(doc.id, {})
+        }
+      })
+      logger.info('Seeded previousUnseenSnapshots from Firestore', {
+        count: snapshot.size
+      })
+    } catch (error: any) {
+      logger.error('Failed to seed previousUnseenSnapshots on listener start', {
+        error: error?.message || error
+      })
+    }
+  }
+
+  seedPreviousUnseenSnapshots().catch(() => {})
 
   const unsubscribe = db
     .collection('consultations-chats')

@@ -73,12 +73,36 @@ export const closeScheduledJobsQueue = async () => {
 
 const processScheduledJob = async (job: Job) => {
   switch (job.name as SupportedJobName) {
-    case 'unseen-message':
-      return sendUnseenMessageEmail(job.data)
-    case 'pending-transaction-check':
-      return sendPendingConsultationPaymentReminder(job.data.transactionId)
-    case 'pending-transaction-expiry':
-      return expirePendingConsultationTransaction(job.data.transactionId)
+    case 'unseen-message': {
+      const result = await sendUnseenMessageEmail(job.data)
+      if (job.id && !job.id.startsWith('repeat:')) {
+        await updateDBAdmin('scheduled-jobs', job.id, {
+          status: 'executed',
+          executedAt: new Date().toISOString()
+        }).catch(() => {})
+      }
+      return result
+    }
+    case 'pending-transaction-check': {
+      const result = await sendPendingConsultationPaymentReminder(job.data.transactionId)
+      if (job.id && !job.id.startsWith('repeat:')) {
+        await updateDBAdmin('scheduled-jobs', job.id, {
+          status: 'executed',
+          executedAt: new Date().toISOString()
+        }).catch(() => {})
+      }
+      return result
+    }
+    case 'pending-transaction-expiry': {
+      const result = await expirePendingConsultationTransaction(job.data.transactionId)
+      if (job.id && !job.id.startsWith('repeat:')) {
+        await updateDBAdmin('scheduled-jobs', job.id, {
+          status: 'executed',
+          executedAt: new Date().toISOString()
+        }).catch(() => {})
+      }
+      return result
+    }
     case 'daily-stats':
       return sendDailyStats()
     case 'weekly-stats':

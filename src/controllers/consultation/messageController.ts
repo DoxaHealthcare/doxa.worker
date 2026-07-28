@@ -76,7 +76,8 @@ export const sendEmail = async ({
     logger.debug('BookingChat fetched', {
       consultationsChat,
       hasSeenMap: Boolean(BookingChat?.seen),
-      unseenCount: BookingChat?.unseenMessages?.[receiverId] || 0
+      unseenCount: BookingChat?.unseenMessages?.[receiverId] || 0,
+      unseenEmailSent: BookingChat?.unseenEmailSent?.[receiverId]
     })
 
     const seen = BookingChat.seen?.[receiverId]
@@ -87,6 +88,16 @@ export const sendEmail = async ({
         receiverId
       })
       return { error: 'Chat has no unseen messages' }
+    }
+
+    const alreadySent = BookingChat.unseenEmailSent?.[receiverId] === true
+
+    if (alreadySent) {
+      logger.info('Unseen-message email already sent for this state, skipping', {
+        consultationsChat,
+        receiverId
+      })
+      return { error: 'Unseen-message email already sent for this state' }
     }
 
     const { success: senderSuccess, data: sender } = await getDBAdmin(
@@ -122,6 +133,12 @@ export const sendEmail = async ({
         receiver,
         isPatient: BookingChat.patientId !== receiverId
       })
+
+      await updateDBAdmin('consultations-chats', consultationsChat, {
+        [`unseenEmailSent.${receiverId}`]: true,
+        updatedAt: new Date().toISOString()
+      }).catch(() => {})
+
       return {
         sender: sender.email,
         unseenMessages,
@@ -192,6 +209,12 @@ export const checkUnSeenMessages = async (req: Request, res: Response) => {
     const maybeid = `${receiverId}${senderId}`
 
     handleCancelJobs(id, maybeid)
+
+    await updateDBAdmin('consultations-chats', consultationsChat, {
+      [`unseenEmailSent.${receiverId}`]: false,
+      updatedAt: new Date().toISOString()
+    }).catch(() => {})
+
     const runDate = new Date()
     runDate.setMinutes(runDate.getMinutes() + 1)
 
@@ -211,11 +234,11 @@ export const checkUnSeenMessages = async (req: Request, res: Response) => {
         now: new Date(),
         response
       })
-      handleCancelJobs(id, maybeid)
       await updateDBAdmin('scheduled-jobs', id, {
         status: 'executed',
         executedAt: new Date().toISOString()
       }).catch(() => {})
+      handleCancelJobs(id, maybeid)
     })
 
     scheduledJobs[id] = job as Job

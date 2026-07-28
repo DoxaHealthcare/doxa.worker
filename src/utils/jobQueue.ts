@@ -6,16 +6,70 @@ import { sendEmail as sendUnseenMessageEmail } from '../controllers/consultation
 import { sendPendingConsultationPaymentReminder } from './scheduler/pendingReminder.js'
 import { expirePendingConsultationTransaction } from './scheduler/pendingExpiry.js'
 import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
-import { getBullMQConnectionOptions } from './redis.js'
+import { getBullMQConnectionOptions, getRedisUrl } from './redis.js'
 
 export const SCHEDULED_JOBS_QUEUE = 'doxa-scheduled-jobs'
 
-type SupportedJobName =
+export type ScheduledJobName =
   | 'unseen-message'
   | 'pending-transaction-check'
   | 'pending-transaction-expiry'
   | 'daily-stats'
   | 'weekly-stats'
+
+type SupportedJobName = ScheduledJobName
+
+let queue: Queue | null = null
+
+export const isRedisQueueEnabled = (): boolean => Boolean(getRedisUrl())
+
+export const getScheduledJobsQueue = (): Queue => {
+  if (!queue) {
+    queue = new Queue(SCHEDULED_JOBS_QUEUE, {
+      connection: getBullMQConnectionOptions(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { age: 24 * 60 * 60, count: 1000 },
+        removeOnFail: { age: 7 * 24 * 60 * 60, count: 5000 }
+      }
+    })
+  }
+
+  return queue
+}
+
+export const replaceDelayedJob = async ({
+  id,
+  name,
+  data,
+  runAt
+}: {
+  id: string
+  name: ScheduledJobName
+  data: Record<string, unknown>
+  runAt: Date
+}) => {
+  const scheduledJobsQueue = getScheduledJobsQueue()
+  const existingJob = await scheduledJobsQueue.getJob(id)
+  if (existingJob) await existingJob.remove()
+
+  return scheduledJobsQueue.add(name, data, {
+    jobId: id,
+    delay: Math.max(runAt.getTime() - Date.now(), 0)
+  })
+}
+
+export const removeDelayedJob = async (id: string) => {
+  const job = await getScheduledJobsQueue().getJob(id)
+  if (job) await job.remove()
+}
+
+export const closeScheduledJobsQueue = async () => {
+  if (!queue) return
+  await queue.close()
+  queue = null
+}
 
 const processScheduledJob = async (job: Job) => {
   switch (job.name as SupportedJobName) {

@@ -15,6 +15,7 @@ import {
 import { getRedisUrl } from "./utils/redis.js";
 import { startRedisJobWorker } from "./utils/jobQueue.js";
 import { acquireLeaderLease } from "./utils/leaderLease.js";
+import { startUnseenMessageListener } from "./services/consultation/unseenMessageListener.js";
 
 // Configure logging
 const morganFormat = ":method :url :status :response-time ms";
@@ -76,7 +77,7 @@ async function startServer() {
     const startTime = new Date();
     const serverTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const nigeriaTime = startTime.toLocaleString("en-GB", { timeZone: "Africa/Lagos" });
-    
+
     logger.info(`Server starting...`);
     logger.info(`Server Timezone: ${serverTimeZone}`);
     logger.info(`Current Server Time: ${startTime.toLocaleString()}`);
@@ -86,7 +87,7 @@ async function startServer() {
     if (process.env.DISTOKEN) {
       const discordLease = getRedisUrl()
         ? await acquireLeaderLease("doxa:leader:discord")
-        : async () => {};
+        : async () => { };
 
       if (discordLease) {
         cleanupTasks.push(discordLease);
@@ -105,6 +106,33 @@ async function startServer() {
     // Initialize Firebase Admin SDK
     initializeFirebaseAdmin();
     logger.info("Firebase Admin SDK initialized");
+
+    {
+      const isDev = process.env.ENV === 'development'
+      const explicitlyEnabled = process.env.ENABLE_UNSEEN_MESSAGE_LISTENER === 'true'
+      const shouldStartListener = !isDev || explicitlyEnabled
+
+      if (!shouldStartListener) {
+        if (isDev) {
+          logger.info(
+            "Unseen-message listener disabled in development by default. " +
+            "Set ENABLE_UNSEEN_MESSAGE_LISTENER=true in .env to enable."
+          )
+        }
+      } else {
+        const chatListenerLease = getRedisUrl()
+          ? await acquireLeaderLease("doxa:leader:unseen-messages")
+          : async () => { };
+
+        if (chatListenerLease) {
+          cleanupTasks.push(chatListenerLease);
+          const detachUnseenMessageListener = startUnseenMessageListener();
+          cleanupTasks.push(detachUnseenMessageListener);
+        } else {
+          logger.info("Another worker owns the unseen-messages listener lease");
+        }
+      }
+    }
 
     if (getRedisUrl()) {
       cleanupTasks.push(await startRedisJobWorker());

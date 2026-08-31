@@ -207,12 +207,8 @@ export const startRedisJobWorker = async () => {
 
   worker.on('completed', job => {
     logger.info('Redis job completed', { id: job.id, name: job.name })
-    if (job.id && !job.id.startsWith('repeat:')) {
-      updateDBAdmin('scheduled-jobs', job.id, {
-        status: 'executed',
-        executedAt: new Date().toISOString()
-      }).catch(() => {})
-    }
+    // Status is updated within the job handler for crash safety
+    // No redundant status update needed here
   })
 
   worker.on('failed', (job, error) => {

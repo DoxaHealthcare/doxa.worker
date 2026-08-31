@@ -126,7 +126,7 @@ async function startServer() {
 
         if (chatListenerLease) {
           cleanupTasks.push(chatListenerLease);
-          const detachUnseenMessageListener = startUnseenMessageListener();
+          const detachUnseenMessageListener = await startUnseenMessageListener();
           cleanupTasks.push(detachUnseenMessageListener);
         } else {
           logger.info("Another worker owns the unseen-messages listener lease");

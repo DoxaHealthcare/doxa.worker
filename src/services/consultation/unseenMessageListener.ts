@@ -80,11 +80,6 @@ const scheduleUnseenMessageJob = async ({
     receiverId
   })
 
-  await updateDBAdmin('consultations-chats', consultationsChat, {
-    [`unseenEmailSent.${receiverId}`]: false,
-    updatedAt: new Date().toISOString()
-  }).catch(() => {})
-
   await handleCancelJobs(id, maybeid)
 
   const runDate = new Date()
@@ -123,10 +118,15 @@ const scheduleUnseenMessageJob = async ({
   })
 }
 
+interface SenderReceiverPair {
+  senderId: string
+  receiverId: string
+}
+
 const determineSenderAndReceiver = (
   docId: string,
   afterData: ConsultationsChatDoc
-): { senderId: string; receiverId: string } | null => {
+): SenderReceiverPair | null => {
   const patientId = afterData.patientId
   const doctorId = afterData.doctorId
 
@@ -155,7 +155,7 @@ const determineSenderAndReceiver = (
   return null
 }
 
-export const startUnseenMessageListener = (): (() => Promise<void>) => {
+export const startUnseenMessageListener = async (): Promise<(() => Promise<void>)> => {
   const db = getAdminFirestore()
 
   logger.info('Starting consultations-chats Firestore listener')
@@ -181,7 +181,7 @@ export const startUnseenMessageListener = (): (() => Promise<void>) => {
     }
   }
 
-  seedPreviousUnseenSnapshots().catch(() => {})
+  await seedPreviousUnseenSnapshots()
 
   const unsubscribe = db
     .collection('consultations-chats')
@@ -218,6 +218,13 @@ export const startUnseenMessageListener = (): (() => Promise<void>) => {
 
           const consultationsChat =
             afterData.consultationsChat || consultationsChatId
+
+          // Reset flag only when there's a genuine new unseen-message increase
+          // Fire-and-forget to avoid blocking Firestore listener
+          updateDBAdmin('consultations-chats', consultationsChat, {
+            [`unseenEmailSent.${pair.receiverId}`]: false,
+            updatedAt: new Date().toISOString()
+          }).catch(() => {})
 
           scheduleUnseenMessageJob({
             consultationsChat,

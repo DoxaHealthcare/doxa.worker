@@ -90,6 +90,16 @@ export const sendEmail = async ({
       return { error: 'Chat has no unseen messages' }
     }
 
+    const unseenCount = BookingChat.unseenMessages?.[receiverId] || 0
+
+    if (unseenCount === 0) {
+      logger.info('User has no unseen messages to remind about', {
+        consultationsChat,
+        receiverId
+      })
+      return { error: 'User has no unseen messages to remind about' }
+    }
+
     const alreadySent = BookingChat.unseenEmailSent?.[receiverId] === true
 
     if (alreadySent) {
@@ -118,18 +128,17 @@ export const sendEmail = async ({
     })
 
     if (receiverSuccess && senderSuccess && receiver && sender) {
-      const unseenMessages = BookingChat.unseenMessages?.[receiverId] || 0
       logger.info('Triggering unseen-message email', {
         consultationsChat,
         receiverId,
         senderId,
-        unseenMessages,
+        unseenMessages: unseenCount,
         isPatient: BookingChat.patientId !== receiverId
       })
 
       await unSeenEmail({
         sender,
-        unseenMessages,
+        unseenMessages: unseenCount,
         receiver,
         isPatient: BookingChat.patientId !== receiverId
       })
@@ -141,7 +150,7 @@ export const sendEmail = async ({
 
       return {
         sender: sender.email,
-        unseenMessages,
+        unseenMessages: unseenCount,
         receiver: receiver.email,
         isPatient: BookingChat.patientId !== receiverId
       }
@@ -209,11 +218,6 @@ export const checkUnSeenMessages = async (req: Request, res: Response) => {
     const maybeid = `${receiverId}${senderId}`
 
     handleCancelJobs(id, maybeid)
-
-    await updateDBAdmin('consultations-chats', consultationsChat, {
-      [`unseenEmailSent.${receiverId}`]: false,
-      updatedAt: new Date().toISOString()
-    }).catch(() => {})
 
     const runDate = new Date()
     runDate.setMinutes(runDate.getMinutes() + 1)

@@ -22,7 +22,7 @@ Run these commands on your DigitalOcean droplet once:
 
 ```bash
 # Install global dependencies
-npm install -g pm2 yarn
+npm install -g pm2 pnpm
 
 # Setup SSH Authorization (Paste your LOCAL .pub key)
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -73,8 +73,8 @@ jobs:
             # Deployment steps
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            yarn install
-            yarn build
+            pnpm install
+            pnpm build
             pm2 restart doxa-worker || pm2 start ecosystem.config.cjs
 ```
 

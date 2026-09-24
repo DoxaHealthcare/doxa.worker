@@ -30,8 +30,8 @@ jobs:
             # Deployment steps
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            yarn install
-            yarn build
+            pnpm install
+            pnpm build
             pm2 restart 3
 
       - name: Send Discord Notification

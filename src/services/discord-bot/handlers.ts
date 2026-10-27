@@ -10,6 +10,7 @@ import { pharmacyService } from '../pharmacy/index.js'
 import { initializeFirebaseAdmin } from '../../utils/firebase/admin.js'
 import { getAuth } from 'firebase-admin/auth'
 import { sendEmail } from '../emailService.js'
+import { v4 as uuidv4 } from 'uuid'
 
 type DoctorOnboardingMessage = {
   email?: string
@@ -190,11 +191,54 @@ export function registerDoctorOnboardingHandler() {
   discordClient.on('messageCreate', async message => {
     try {
       if (message.author.bot) return
-      if (message.channelId !== CHANNEL_ID) return
+      // Strict channel gating: only listen in the designated channel
+      if (!CHANNEL_ID || message.channelId !== CHANNEL_ID) return
+
+      const rawContent = (message.content || '').trim()
+
+      // Handle invite generation command: e.g. !invite, !invite-doctor, invite doctor, /invite-doctor
+      const isInviteCommand =
+        rawContent.startsWith('!invite') ||
+        rawContent.toLowerCase().startsWith('invite doctor') ||
+        rawContent.startsWith('/invite')
+
+      if (isInviteCommand) {
+        const email = extractEmail(rawContent) || extractField(rawContent, 'email') || null
+        const tokenId = uuidv4()
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days expiry
+
+        const adminDb = getAdminFirestore()
+        await adminDb.collection('doctor-invites').doc(tokenId).set({
+          id: tokenId,
+          email: email ? email.toLowerCase().trim() : null,
+          status: 'PENDING',
+          createdBy: message.author.id,
+          createdByName: message.author.username || message.author.tag,
+          createdAt: now.toISOString(),
+          expiresAt
+        })
+
+        const frontendBaseUrl = (process.env.FRONTEND_BASE_URL || 'https://doxahealth.ng').replace(/\/$/, '')
+        const inviteUrl = `${frontendBaseUrl}/become-a-doctor?token=${tokenId}`
+
+        await message.reply({
+          content: [
+            `🩺 **Doctor Invite Link Generated!**`,
+            email ? `👤 **Pre-filled Email:** \`${email.toLowerCase().trim()}\`` : `👤 **Pre-filled Email:** *(None - doctor will enter their own)*`,
+            `🔗 **Invite URL:** ${inviteUrl}`,
+            `⏱️ **Expires:** in 14 days`,
+            `\n*Share this link with the doctor to complete their registration & onboarding.*`
+          ].join('\n')
+        })
+        return
+      }
 
       const { email, fullName, password } = parseDoctorOnboardingMessage(message.content || '')
       if (!email || !password) {
-        await message.reply('Format error: please include email and password. Example: email=user@example.com fullname="Jane Doe" password=Secr3t!')
+        await message.reply(
+          'Format error: To generate an invite link, type `!invite-doctor email=doctor@example.com` or simply `!invite-doctor`.\nTo directly create an account, provide email and password. Example: `email=user@example.com fullname="Jane Doe" password=Secr3t!`'
+        )
         return
       }
 

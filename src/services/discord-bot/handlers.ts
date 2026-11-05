@@ -202,6 +202,98 @@ export function registerDoctorOnboardingHandler() {
         rawContent.toLowerCase().startsWith('invite doctor') ||
         rawContent.startsWith('/invite')
 
+      // Handle resend pending notifications command
+      const isResendPendingCommand =
+        rawContent === '!resend-pending' ||
+        rawContent === '!resend-pending-doctors' ||
+        rawContent.toLowerCase().startsWith('resend pending')
+
+      // Handle view pending doctors command
+      const isViewPendingCommand =
+        rawContent === '!pending-doctors' ||
+        rawContent === '!view-pending' ||
+        rawContent.toLowerCase().startsWith('view pending')
+
+      if (isViewPendingCommand) {
+        try {
+          const adminKey = process.env.ADMIN_API_KEY
+          if (!adminKey) {
+            await message.reply('ADMIN_API_KEY not configured in environment.')
+            return
+          }
+
+          const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:4000'
+          const response = await fetch(`${backendUrl}/v1/api/doctors/admin/pending-doctors`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-key': adminKey
+            }
+          })
+
+          const result = await response.json()
+
+          if (result.success && result.data && result.data.length > 0) {
+            const doctors = result.data
+            const notificationStatus = doctors.map((d: any) => {
+              const status = d.discordNotificationSent ? '✅ Sent' : '❌ Not sent'
+              const sentAt = d.discordNotificationSentAt ? ` (${new Date(d.discordNotificationSentAt).toLocaleDateString()})` : ''
+              return `${status}${sentAt}`
+            }).join('\n')
+
+            const doctorList = doctors.map((d: any, i: number) => {
+              return `${i + 1}. **${d.fullName}** (${d.email})\n   MDCN: ${d.mdcnRegistrationNumber || '—'}\n   Applied: ${new Date(d.createdAt).toLocaleDateString()}`
+            }).join('\n\n')
+
+            await message.reply(
+              `📋 **Pending Doctor Applications (${doctors.length})**\n\n${doctorList}\n\n**Notification Status:**\n${notificationStatus}`
+            )
+          } else if (result.success && (!result.data || result.data.length === 0)) {
+            await message.reply('✅ No pending doctor applications found.')
+          } else {
+            await message.reply(`❌ Failed to fetch pending doctors: ${result.message || 'Unknown error'}`)
+          }
+        } catch (err: any) {
+          logger.error('Failed to fetch pending doctors', { error: err?.message || err })
+          await message.reply('❌ Failed to fetch pending doctors. Check server logs.')
+        }
+        return
+      }
+
+      if (isResendPendingCommand) {
+        try {
+          const adminKey = process.env.ADMIN_API_KEY
+          if (!adminKey) {
+            await message.reply('ADMIN_API_KEY not configured in environment.')
+            return
+          }
+
+          const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:4000'
+          const response = await fetch(`${backendUrl}/v1/api/doctors/admin/resend-pending-notifications`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-key': adminKey
+            }
+          })
+
+          const result = await response.json()
+
+          if (result.success) {
+            const { total, success, failure } = result.data || {}
+            await message.reply(
+              `✅ Resent ${success}/${total} pending doctor notification(s).${failure > 0 ? ` ${failure} failed.` : ''}`
+            )
+          } else {
+            await message.reply(`❌ Failed to resend notifications: ${result.message || 'Unknown error'}`)
+          }
+        } catch (err: any) {
+          logger.error('Failed to resend pending doctor notifications', { error: err?.message || err })
+          await message.reply('❌ Failed to resend notifications. Check server logs.')
+        }
+        return
+      }
+
       if (isInviteCommand) {
         const email = extractEmail(rawContent) || extractField(rawContent, 'email') || null
         const tokenId = uuidv4()

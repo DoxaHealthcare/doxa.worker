@@ -80,6 +80,21 @@ export class DiscordBotService {
     }
   }
 
+  async sendDoctorApplicationNotification (content: string) {
+    const channelId = process.env.DISCORD_DOCTOR_ONBOARDING_CHANNEL_ID?.trim()
+    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
+    if (channel && channel.type === ChannelType.GuildText) {
+      const textChannel = channel as TextChannel
+      return textChannel
+        .send(content)
+        .catch((err: any) => logger.error('Failed to send doctor application notification:', err))
+    } else {
+      logger.error(
+        'Channel not text-capable or not found for doctor application notification.'
+      )
+    }
+  }
+
   
 
   registerApprovalButtonsHandler () {
@@ -124,6 +139,9 @@ export class DiscordBotService {
                   break
                 case 'SEND_LOG_MESSAGE':
                   await this.sendLogMessage(task.payload.content)
+                  break
+                case 'SEND_DOCTOR_APPLICATION_NOTIFICATION':
+                  await this.sendDoctorApplicationNotification(task.payload.content)
                   break
                 default:
                   throw new Error(`Unknown Discord task type: ${task.type}`)

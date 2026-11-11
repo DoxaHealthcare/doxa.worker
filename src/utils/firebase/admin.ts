@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { getAuth, Auth } from "firebase-admin/auth";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -33,6 +34,12 @@ function initializeFirebaseAdmin(): void {
 export function getAdminFirestore(): Firestore {
   initializeFirebaseAdmin();
   return getFirestore();
+}
+
+// Get Auth instance
+export function getAdminAuth(): Auth {
+  initializeFirebaseAdmin();
+  return getAuth();
 }
 
 export { initializeFirebaseAdmin };

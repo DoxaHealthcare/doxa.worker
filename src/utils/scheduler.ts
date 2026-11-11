@@ -6,8 +6,26 @@ import { sendEmail as sendUnseenMessageEmail } from '../controllers/consultation
 import { sendPendingConsultationPaymentReminder } from './scheduler/pendingReminder.js'
 import { expirePendingConsultationTransaction } from './scheduler/pendingExpiry.js'
 import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
+import { processDoctorInviteFollowUps } from './scheduler/doctorInviteFollowUp.js'
+import { processPatientRetentionFollowUps } from './scheduler/patientRetentionFollowUp.js'
 
 const restoredJobs: Record<string, Job> = {}
+
+export const scheduleRetentionAndFollowUpJobs = (): void => {
+  // Run every 20 minutes to evaluate sign-up timestamps accurately
+  // (matches the hour a doctor/patient registered: 24h, 3 days, expiry)
+  scheduleJob('*/20 * * * *', async () => {
+    logger.info('Executing scheduled retention and follow-up scan...')
+    try {
+      await processDoctorInviteFollowUps()
+      await processPatientRetentionFollowUps()
+    } catch (err: any) {
+      logger.error('Error executing retention and follow-up scan:', { error: err?.message || err })
+    }
+  })
+
+  logger.info('Retention and Follow-Up jobs scheduled (every 20 minutes)')
+}
 
 export const scheduleDailyStatsJob = (): void => {
   // Schedule daily stats to run every day at 7 PM (19:00)

@@ -10,7 +10,8 @@ import {
   restoreUnSeenMessageJobs,
   restorePendingTransactionJobs,
   restorePendingTransactionExpiryJobs,
-  scheduleDailyStatsJob
+  scheduleDailyStatsJob,
+  scheduleRetentionAndFollowUpJobs
 } from "./utils/scheduler.js";
 import { getRedisUrl } from "./utils/redis.js";
 import { startRedisJobWorker } from "./utils/jobQueue.js";
@@ -146,6 +147,7 @@ async function startServer() {
         restorePendingTransactionExpiryJobs()
       ]);
       scheduleDailyStatsJob();
+      scheduleRetentionAndFollowUpJobs();
     }
 
     const PORT = process.env.PORT;

@@ -46,7 +46,7 @@ async function runInitialCampaign() {
         const email = data.email || doc.id
 
         if (expiresAt > 0 && now > expiresAt) {
-          console.log(`  - [EXPIRED -> WOULD DELETE] Invite: ${email} (Expired at: ${data.expiresAt})`)
+          console.log(`  - [EXPIRED -> WOULD SEND EXPIRY EMAIL & DELETE] Invite: ${email} (Expired at: ${data.expiresAt})`)
         } else if (expiresAt > 0 && expiresAt - now <= ONE_DAY && !data.expiryWarningSentAt) {
           console.log(`  - [EXPIRING SOON -> WOULD WARN] Invite: ${email} (Expires in: ${Math.round((expiresAt - now)/3600000)}h)`)
         } else if (createdAt > 0 && now - createdAt >= THREE_DAYS && !data.reminder3dSentAt) {

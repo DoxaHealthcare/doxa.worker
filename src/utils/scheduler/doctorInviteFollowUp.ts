@@ -144,12 +144,27 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
         continue
       }
 
-      // 4. Cleanup Expired Invites: If the link has expired and doctor hasn't completed onboarding, delete
+      // 4. Handle Expired Invites: Send expiration notification with re-apply link, then delete details
       if (expiresAt > 0 && now > expiresAt) {
-        logger.info('Invite expired without onboarding, deleting doctor invite details', {
+        logger.info('Invite expired without onboarding, sending expired email and cleaning up', {
           inviteId,
           email
         })
+
+        const applyDoctorUrl = `${frontendBaseUrl}/apply-as-doctor`
+
+        // Send email notifying doctor their link expired with link to apply
+        await sendEmail(
+          email,
+          'Your Doxa Doctor invitation link has expired',
+          'doctor-invite-expired',
+          {
+            fullName,
+            applyDoctorUrl,
+            subject: 'Your Doxa Doctor invitation link has expired'
+          },
+          'onboarding'
+        )
 
         // Delete the invite document from 'doctor-invites'
         await db.collection('doctor-invites').doc(inviteId).delete()
@@ -158,7 +173,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
           `🗑️ **[Doctor Invite Expired & Cleaned Up]**\n` +
           `• **Doctor Email:** <${email}>\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
-          `• **Action:** Invitation token and details deleted from platform due to expiry.`
+          `• **Action:** Sent expiry notice with apply link (<${applyDoctorUrl}>) and deleted expired invite from database.`
         ).catch(() => {})
       }
     }

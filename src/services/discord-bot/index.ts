@@ -19,7 +19,7 @@ export class DiscordBotService {
       const textChannel = channel as TextChannel
       return textChannel
         .send(
-          `${data.name} just scheduled a consultation with Dr. ${data.doctorName} on ${data.date}. 🥳`
+          `${data.name} just scheduled a consultation with ${data.doctorName ? `Dr. ${data.doctorName}` : 'a doctor'} on ${data.date}. 🥳`
         )
         .catch((err: any) => logger.error('Failed to send message:', err))
     } else {
@@ -46,7 +46,7 @@ export class DiscordBotService {
     }
   }
 
-  async sendApprovalPrompt (
+  async sendApprovalPrompt(
     channelId: string,
     content: string,
     payload: ApprovalPayload
@@ -54,7 +54,7 @@ export class DiscordBotService {
     return sendApprovalPrompt(channelId, content, payload)
   }
 
-  async sendWithdrawalApprovalPrompt (
+  async sendWithdrawalApprovalPrompt(
     content: string,
     payload: WithdrawalApprovalPayload
   ) {
@@ -65,7 +65,7 @@ export class DiscordBotService {
     else return null
   }
 
-  async sendLogMessage (content: string) {
+  async sendLogMessage(content: string) {
     const channelId = process.env.DISCORD_LOGS_CHANNEL_ID?.trim()
     const channel = channelId ? discordClient.channels.cache.get(channelId) : null
     if (channel && channel.type === ChannelType.GuildText) {
@@ -80,7 +80,7 @@ export class DiscordBotService {
     }
   }
 
-  async sendDoctorApplicationNotification (content: string) {
+  async sendDoctorApplicationNotification(content: string) {
     const channelId = process.env.DISCORD_DOCTOR_ONBOARDING_CHANNEL_ID?.trim()
     const channel = channelId ? discordClient.channels.cache.get(channelId) : null
     if (channel && channel.type === ChannelType.GuildText) {
@@ -95,24 +95,24 @@ export class DiscordBotService {
     }
   }
 
-  
 
-  registerApprovalButtonsHandler () {
+
+  registerApprovalButtonsHandler() {
     return registerApprovalButtonsHandler()
   }
 
-  registerDoctorOnboardingHandler () {
+  registerDoctorOnboardingHandler() {
     return registerDoctorOnboardingHandler()
   }
 
-  registerPharmacyOnboardingHandler () {
+  registerPharmacyOnboardingHandler() {
     return registerPharmacyOnboardingHandler()
   }
 
   listenToDiscordTasks() {
     const db = getAdminFirestore()
     logger.info('Starting Discord task listener')
-    
+
     return db.collection('discord-tasks')
       .where('status', '==', 'PENDING')
       .onSnapshot(snapshot => {
@@ -120,10 +120,10 @@ export class DiscordBotService {
           if (change.type === 'added') {
             const task = change.doc.data()
             const taskId = change.doc.id
-            
+
             try {
               logger.info(`Processing Discord task: ${task.type}`, { taskId })
-              
+
               switch (task.type) {
                 case 'NOTIFY_NEW_CONSULTATION':
                   await this.notifyNewConsultation(task.payload)
@@ -146,7 +146,7 @@ export class DiscordBotService {
                 default:
                   throw new Error(`Unknown Discord task type: ${task.type}`)
               }
-              
+
               await updateDBAdmin('discord-tasks', taskId, {
                 status: 'COMPLETED',
                 processedAt: new Date().toISOString()

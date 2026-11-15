@@ -6,6 +6,8 @@ import { sendEmail as sendUnseenMessageEmail } from '../controllers/consultation
 import { sendPendingConsultationPaymentReminder } from './scheduler/pendingReminder.js'
 import { expirePendingConsultationTransaction } from './scheduler/pendingExpiry.js'
 import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
+import { processDoctorInviteFollowUps } from './scheduler/doctorInviteFollowUp.js'
+import { processPatientRetentionFollowUps } from './scheduler/patientRetentionFollowUp.js'
 import { getBullMQConnectionOptions, getRedisUrl } from './redis.js'
 
 export const SCHEDULED_JOBS_QUEUE = 'doxa-scheduled-jobs'
@@ -16,6 +18,8 @@ export type ScheduledJobName =
   | 'pending-transaction-expiry'
   | 'daily-stats'
   | 'weekly-stats'
+  | 'doctor-invite-followup'
+  | 'patient-retention-followup'
 
 type SupportedJobName = ScheduledJobName
 
@@ -107,6 +111,10 @@ const processScheduledJob = async (job: Job) => {
       return sendDailyStats()
     case 'weekly-stats':
       return sendWeeklyStats()
+    case 'doctor-invite-followup':
+      return processDoctorInviteFollowUps()
+    case 'patient-retention-followup':
+      return processPatientRetentionFollowUps()
     default:
       throw new Error(`Unsupported scheduled job: ${job.name}`)
   }
@@ -193,6 +201,32 @@ export const startRedisJobWorker = async () => {
       opts: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 10000 },
+        removeOnComplete: 30,
+        removeOnFail: 100
+      }
+    }
+  )
+  await queue.upsertJobScheduler(
+    'doctor-invite-followup-20m',
+    { pattern: '*/20 * * * *', tz: 'Africa/Lagos' },
+    {
+      name: 'doctor-invite-followup',
+      data: {},
+      opts: {
+        attempts: 1,
+        removeOnComplete: 30,
+        removeOnFail: 100
+      }
+    }
+  )
+  await queue.upsertJobScheduler(
+    'patient-retention-followup-20m',
+    { pattern: '*/20 * * * *', tz: 'Africa/Lagos' },
+    {
+      name: 'patient-retention-followup',
+      data: {},
+      opts: {
+        attempts: 1,
         removeOnComplete: 30,
         removeOnFail: 100
       }

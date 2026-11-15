@@ -31,7 +31,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
       const invite = doc.data() as any
       const inviteId = doc.id
       const email = invite.email
-      const fullName = invite.fullName || 'Doctor'
+      const fullName = invite.fullName
       const token = invite.token || inviteId
 
       if (!email) continue
@@ -67,7 +67,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `📧 **[Doctor Follow-Up] 24-Hour Profile Reminder Sent**\n` +
-          `• **Doctor:** Dr. ${fullName} (<${email}>)\n` +
+          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Status:** Reminded to complete profile and set consultation fees.`
         ).catch(() => {})
@@ -100,7 +100,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `📧 **[Doctor Follow-Up] Day 3 Profile Reminder Sent**\n` +
-          `• **Doctor:** Dr. ${fullName} (<${email}>)\n` +
+          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Status:** Reminded that profile is awaiting completion.`
         ).catch(() => {})
@@ -137,7 +137,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `⚠️ **[Doctor Invite Alert] Expiry Warning Sent (${timeLeft} Left)**\n` +
-          `• **Doctor:** Dr. ${fullName} (<${email}>)\n` +
+          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Time Remaining:** ${timeLeft}`
         ).catch(() => {})

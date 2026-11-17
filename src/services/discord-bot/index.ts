@@ -1,5 +1,5 @@
-import type { ApprovalPayload, WithdrawalApprovalPayload } from './types.js'
-import { sendApprovalPrompt, sendWithdrawalApprovalPrompt } from './prompts.js'
+import type { ApprovalPayload, WithdrawalApprovalPayload, DoctorApplicationPayload } from './types.js'
+import { sendApprovalPrompt, sendWithdrawalApprovalPrompt, sendDoctorApplicationPrompt } from './prompts.js'
 import {
   registerApprovalButtonsHandler,
   registerDoctorOnboardingHandler,
@@ -80,19 +80,8 @@ export class DiscordBotService {
     }
   }
 
-  async sendDoctorApplicationNotification(content: string) {
-    const channelId = process.env.DISCORD_DOCTOR_ONBOARDING_CHANNEL_ID?.trim()
-    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
-    if (channel && channel.type === ChannelType.GuildText) {
-      const textChannel = channel as TextChannel
-      return textChannel
-        .send(content)
-        .catch((err: any) => logger.error('Failed to send doctor application notification:', err))
-    } else {
-      logger.error(
-        'Channel not text-capable or not found for doctor application notification.'
-      )
-    }
+  async sendDoctorApplicationNotification(payload: DoctorApplicationPayload) {
+    return sendDoctorApplicationPrompt(payload)
   }
 
 
@@ -141,7 +130,7 @@ export class DiscordBotService {
                   await this.sendLogMessage(task.payload.content)
                   break
                 case 'SEND_DOCTOR_APPLICATION_NOTIFICATION':
-                  await this.sendDoctorApplicationNotification(task.payload.content)
+                  await this.sendDoctorApplicationNotification(task.payload)
                   break
                 default:
                   throw new Error(`Unknown Discord task type: ${task.type}`)

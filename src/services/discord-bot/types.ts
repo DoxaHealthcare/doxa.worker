@@ -16,9 +16,20 @@ export type WithdrawalApprovalPayload = {
   accountName?: string
 }
 
+export type DoctorApplicationPayload = {
+  doctorId: string
+  email?: string | null
+  fullName?: string | null
+  phoneNumber?: string | null
+  specialty?: string | null
+  mdcnRegistrationNumber?: string | null
+  appliedAt?: string | null
+  heading?: string
+}
+
 export type ApprovalTokenData = {
-  kind?: 'CONSULTATION_PAYOUT' | 'WITHDRAWAL'
-  payload: ApprovalPayload | WithdrawalApprovalPayload
+  kind?: 'CONSULTATION_PAYOUT' | 'WITHDRAWAL' | 'DOCTOR_APPLICATION'
+  payload: ApprovalPayload | WithdrawalApprovalPayload | DoctorApplicationPayload
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   createdAt: string
   processedAt?: string

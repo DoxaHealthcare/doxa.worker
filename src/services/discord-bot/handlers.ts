@@ -173,6 +173,70 @@ export function registerApprovalButtonsHandler() {
         }
       }
 
+      if (tokenKind === 'DOCTOR_APPLICATION') {
+        const doctorId = tokenData?.payload?.doctorId
+        const adminKey = process.env.ADMIN_API_KEY
+        const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:4000'
+
+        if (!doctorId) {
+          return safeRespond(interaction, 'Unknown interaction: missing doctor id.')
+        }
+        if (!adminKey) {
+          return safeRespond(interaction, 'ADMIN_API_KEY not configured in environment.')
+        }
+
+        const endpoint = action === 'approve' ? 'approve' : 'reject'
+
+        try {
+          const response = await fetch(
+            `${backendUrl}/v1/api/doctors/admin/${doctorId}/${endpoint}`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-key': adminKey
+              },
+              body: JSON.stringify({
+                reason: 'Rejected via Discord',
+                reviewedBy: interaction?.user?.id
+              })
+            }
+          )
+
+          const result = await response.json()
+
+          if (result.success) {
+            await adminDb
+              .collection('discord-approval-tokens')
+              .doc(tokenId)
+              .update({
+                status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+                processedAt: new Date().toISOString(),
+                processedBy: interaction?.user?.id
+              })
+            return safeRespond(
+              interaction,
+              action === 'approve'
+                ? 'Doctor application approved. 🎉'
+                : 'Doctor application rejected.'
+            )
+          }
+
+          return safeRespond(
+            interaction,
+            `Failed: ${result.message || 'Unknown error'}`
+          )
+        } catch (err: any) {
+          logger.error('Failed to process doctor application action', {
+            error: err?.message || err
+          })
+          return safeRespond(
+            interaction,
+            'Failed to process the application. Check server logs.'
+          )
+        }
+      }
+
       return safeRespond(interaction, 'Unknown token kind.')
     } catch (error) {
       logger.error('Error handling Discord interaction', { error: (error as Error).message })

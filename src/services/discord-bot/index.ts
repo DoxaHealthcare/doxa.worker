@@ -6,44 +6,69 @@ import {
   registerPharmacyOnboardingHandler
 } from './handlers.js'
 import { discordClient } from '../../../discord/index.js'
-import { ChannelType, TextChannel } from 'discord.js'
+import { TextChannel } from 'discord.js'
 import { getAdminFirestore } from '../../utils/firebase/admin.js'
 import { updateDBAdmin } from '../../utils/firebase/admin-database.js'
 import logger from '../../utils/logger.js'
 
 export class DiscordBotService {
-  async notifyNewConsultation(data: { name: string; doctorName: string; date: string }) {
-    const channelId = process.env.DISCORD_NEW_CONSULTATION_CHANNEL_ID?.trim()
-    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
-    if (channel && channel.type === ChannelType.GuildText) {
-      const textChannel = channel as TextChannel
-      return textChannel
-        .send(
-          `${data.name} just scheduled a consultation with ${data.doctorName ? `Dr. ${data.doctorName}` : 'a doctor'} on ${data.date}. 🥳`
-        )
-        .catch((err: any) => logger.error('Failed to send message:', err))
-    } else {
-      logger.error(
-        'Channel not text-capable or not found for new consultation message.'
-      )
+  /**
+   * Resolves a text channel from the cache, falling back to an API fetch when
+   * the channel has not been cached yet (Discord.js only caches channels once
+   * guild data has loaded, so a cache miss is not a definitive "not found").
+   */
+  private async getTextChannel(
+    channelId: string | undefined,
+    label: string
+  ): Promise<TextChannel | null> {
+    const id = channelId?.trim()
+    if (!id) {
+      logger.error(`Channel id not configured for ${label}`)
+      return null
+    }
+
+    try {
+      const cached = discordClient.channels.cache.get(id)
+      const channel = cached ?? (await discordClient.channels.fetch(id))
+      if (channel && channel.isTextBased()) return channel as TextChannel
+
+      logger.error(`Channel not text-capable or not found for ${label}`, {
+        channelId: id
+      })
+      return null
+    } catch (err: any) {
+      logger.error(`Failed to resolve channel for ${label}`, {
+        channelId: id,
+        error: err?.message || err
+      })
+      return null
     }
   }
 
-  async notifyNewUser(data: { name: string }) {
-    const channelId = process.env.DISCORD_NEW_USER_CHANNEL_ID?.trim()
-    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
-    if (channel && channel.type === ChannelType.GuildText) {
-      const textChannel = channel as TextChannel
-      return textChannel
-        .send(
-          `Welcome ${data.name} to Doxa! 🥳`
-        )
-        .catch((err: any) => logger.error('Failed to send message:', err))
-    } else {
-      logger.error(
-        'Channel not text-capable or not found for new user message.'
+  async notifyNewConsultation(data: { name: string; doctorName: string; date: string }) {
+    const channel = await this.getTextChannel(
+      process.env.DISCORD_NEW_CONSULTATION_CHANNEL_ID,
+      'new consultation message'
+    )
+    if (!channel) return
+
+    return channel
+      .send(
+        `${data.name} just scheduled a consultation with ${data.doctorName ? `Dr. ${data.doctorName}` : 'a doctor'} on ${data.date}. 🥳`
       )
-    }
+      .catch((err: any) => logger.error('Failed to send message:', err))
+  }
+
+  async notifyNewUser(data: { name: string }) {
+    const channel = await this.getTextChannel(
+      process.env.DISCORD_NEW_USER_CHANNEL_ID,
+      'new user message'
+    )
+    if (!channel) return
+
+    return channel
+      .send(`Welcome ${data.name} to Doxa! 🥳`)
+      .catch((err: any) => logger.error('Failed to send message:', err))
   }
 
   async sendApprovalPrompt(
@@ -66,18 +91,15 @@ export class DiscordBotService {
   }
 
   async sendLogMessage(content: string) {
-    const channelId = process.env.DISCORD_LOGS_CHANNEL_ID?.trim()
-    const channel = channelId ? discordClient.channels.cache.get(channelId) : null
-    if (channel && channel.type === ChannelType.GuildText) {
-      const textChannel = channel as TextChannel
-      return textChannel
-        .send(content)
-        .catch((err: any) => logger.error('Failed to send log message:', err))
-    } else {
-      logger.error(
-        'Channel not text-capable or not found for logs message.'
-      )
-    }
+    const channel = await this.getTextChannel(
+      process.env.DISCORD_LOGS_CHANNEL_ID,
+      'logs message'
+    )
+    if (!channel) return
+
+    return channel
+      .send(content)
+      .catch((err: any) => logger.error('Failed to send log message:', err))
   }
 
   async sendDoctorApplicationNotification(payload: DoctorApplicationPayload) {

@@ -2,6 +2,7 @@ import { getAdminFirestore } from '../firebase/admin.js'
 import { updateDBAdmin } from '../firebase/admin-database.js'
 import logger from '../logger.js'
 import { sendEmail as sendTemplateEmail } from '../../services/emailService.js'
+import { discordBotService } from '../../services/discord-bot/index.js'
 
 /**
  * Expire a pending consultation transaction if still pending and notify patient.
@@ -121,6 +122,14 @@ export const expirePendingConsultationTransaction = async (
       patientId,
       email: patientEmail.replace(/(.{2}).*(@.*)/, '$1***$2')
     })
+
+    await discordBotService.sendLogMessage(
+      `⌛ **[Pending Consultation] Payment Window Expired**\n` +
+      `• **Patient:** ${patientInfo?.fullName || patientEmail} (<${patientEmail}>)\n` +
+      `• **Transaction ID:** \`${transactionId}\`\n` +
+      `• **Doctor:** ${doctorName}\n` +
+      `• **Status:** Unpaid consultation expired; patient notified to generate new payment details.`
+    ).catch(() => {})
   } catch (error: any) {
     logger.error('expirePendingConsultationTransaction: Failed to expire transaction', {
       transactionId,

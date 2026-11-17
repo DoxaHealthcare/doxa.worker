@@ -2,6 +2,7 @@ import { getAdminFirestore } from '../firebase/admin.js'
 import { updateDBAdmin } from '../firebase/admin-database.js'
 import logger from '../logger.js'
 import { sendEmail as sendTemplateEmail } from '../../services/emailService.js'
+import { discordBotService } from '../../services/discord-bot/index.js'
 
 export const sendPendingConsultationPaymentReminder = async (
   transactionId: string,
@@ -102,6 +103,14 @@ export const sendPendingConsultationPaymentReminder = async (
       pendingReminderSentAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }).catch(() => {})
+
+    await discordBotService.sendLogMessage(
+      `💳 **[Pending Consultation] Payment Reminder Sent**\n` +
+      `• **Patient:** ${patientInfo?.fullName || patientEmail} (<${patientEmail}>)\n` +
+      `• **Transaction ID:** \`${transactionId}\`\n` +
+      `• **Doctor:** ${doctorName}\n` +
+      `• **Status:** Patient reminded to complete payment for an unpaid consultation.`
+    ).catch(() => {})
   } catch (error: any) {
     logger.error(
       'sendPendingConsultationPaymentReminder: Failed to send reminder',

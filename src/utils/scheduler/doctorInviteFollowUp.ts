@@ -2,6 +2,7 @@ import { getAdminFirestore } from '../firebase/admin.js'
 import { updateDBAdmin } from '../firebase/admin-database.js'
 import { sendEmail } from '../../services/emailService.js'
 import { discordBotService } from '../../services/discord-bot/index.js'
+import { formatDoctorName, getDoctorGreeting } from '../formatDoctorName.js'
 import logger from '../logger.js'
 
 export const processDoctorInviteFollowUps = async (): Promise<void> => {
@@ -39,6 +40,8 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
       const createdAt = invite.createdAt ? new Date(invite.createdAt).getTime() : 0
       const expiresAt = invite.expiresAt ? new Date(invite.expiresAt).getTime() : 0
       const onboardUrl = `${frontendBaseUrl}/become-a-doctor?token=${encodeURIComponent(token)}`
+      const doctorGreeting = getDoctorGreeting(fullName)
+      const formattedDoctorName = formatDoctorName(fullName, { fallback: 'Doctor' })
 
       // 1. Follow-up 1: 24 Hours after invite was sent (at the same time of day)
       // Check window: between 24h and 48h after creation, if reminder_24h not sent
@@ -54,7 +57,8 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
           'Reminder: Complete your Doxa Doctor profile',
           'doctor-invite-reminder',
           {
-            fullName,
+            fullName: formattedDoctorName,
+            doctorGreeting,
             onboardUrl,
             subject: 'Reminder: Complete your Doxa Doctor profile'
           },
@@ -67,7 +71,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `📧 **[Doctor Follow-Up] 24-Hour Profile Reminder Sent**\n` +
-          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
+          `• **Doctor:** ${formattedDoctorName} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Status:** Reminded to complete profile and set consultation fees.`
         ).catch(() => {})
@@ -82,12 +86,14 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
         !invite.reminder3dSentAt
       ) {
         logger.info('Sending 3-day reminder to invited doctor', { inviteId, email })
+        const subject = `${formattedDoctorName}, your Doxa profile is waiting for you`
         await sendEmail(
           email,
-          'Dr. ' + fullName + ', your Doxa profile is waiting for you',
+          subject,
           'doctor-invite-reminder',
           {
-            fullName,
+            fullName: formattedDoctorName,
+            doctorGreeting,
             onboardUrl,
             subject: 'Your Doxa profile is waiting for you'
           },
@@ -100,7 +106,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `📧 **[Doctor Follow-Up] Day 3 Profile Reminder Sent**\n` +
-          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
+          `• **Doctor:** ${formattedDoctorName} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Status:** Reminded that profile is awaiting completion.`
         ).catch(() => {})
@@ -123,7 +129,8 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
           `Action Required: Your Doxa invitation link expires in ${timeLeft}`,
           'doctor-invite-expiring',
           {
-            fullName,
+            fullName: formattedDoctorName,
+            doctorGreeting,
             onboardUrl,
             timeLeft,
             subject: `Action Required: Your Doxa invitation link expires in ${timeLeft}`
@@ -137,7 +144,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
 
         await discordBotService.sendLogMessage(
           `⚠️ **[Doctor Invite Alert] Expiry Warning Sent (${timeLeft} Left)**\n` +
-          `• **Doctor:** ${fullName ? `Dr. ${fullName}` : 'Unknown'} (<${email}>)\n` +
+          `• **Doctor:** ${formattedDoctorName} (<${email}>)\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Time Remaining:** ${timeLeft}`
         ).catch(() => {})
@@ -159,7 +166,8 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
           'Your Doxa Doctor invitation link has expired',
           'doctor-invite-expired',
           {
-            fullName,
+            fullName: formattedDoctorName,
+            doctorGreeting,
             applyDoctorUrl,
             subject: 'Your Doxa Doctor invitation link has expired'
           },
@@ -172,6 +180,7 @@ export const processDoctorInviteFollowUps = async (): Promise<void> => {
         await discordBotService.sendLogMessage(
           `🗑️ **[Doctor Invite Expired & Cleaned Up]**\n` +
           `• **Doctor Email:** <${email}>\n` +
+          `• **Doctor:** ${formattedDoctorName}\n` +
           `• **Invite ID:** \`${inviteId}\`\n` +
           `• **Action:** Sent expiry notice with apply link (<${applyDoctorUrl}>) and deleted expired invite from database.`
         ).catch(() => {})

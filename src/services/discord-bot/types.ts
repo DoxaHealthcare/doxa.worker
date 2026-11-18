@@ -21,8 +21,17 @@ export type DoctorApplicationPayload = {
   email?: string | null
   fullName?: string | null
   phoneNumber?: string | null
+  gender?: string | null
+  dateofbirth?: string | null
   specialty?: string | null
+  experience?: string | null
+  affiliatedHospital?: string | null
   mdcnRegistrationNumber?: string | null
+  aboutMe?: string | null
+  profileImage?: string | null
+  consultationFee?: number | string | null
+  sessionDuration?: string | null
+  availableDaysSummary?: string | null
   appliedAt?: string | null
   heading?: string
 }

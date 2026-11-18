@@ -185,22 +185,41 @@ export async function sendDoctorApplicationPrompt (
   const tokenId = await createApprovalToken(tokenData)
 
   const embed = new EmbedBuilder()
-    .setTitle('Doctor Application')
+    .setTitle('🩺 New Doctor Application')
+    .setColor(0x008080)
     .setDescription(
-      payload.heading || '🩺 A new self-serve doctor has applied to join Doxa.'
+      payload.heading || 'A new self-serve doctor has applied to join Doxa.'
     )
     .addFields([
-      { name: 'Name', value: payload.fullName || '—', inline: true },
-      { name: 'Email', value: payload.email || '—', inline: true },
-      { name: 'Phone', value: payload.phoneNumber || '—', inline: true },
-      { name: 'MDCN', value: payload.mdcnRegistrationNumber || '—', inline: true },
-      { name: 'Specialty', value: payload.specialty || '—', inline: true },
-      ...(payload.appliedAt
-        ? [{ name: 'Applied', value: payload.appliedAt, inline: true }]
+      { name: '👤 Full Name', value: payload.fullName || '—', inline: true },
+      { name: '📧 Email', value: payload.email || '—', inline: true },
+      { name: '📞 Phone', value: payload.phoneNumber || '—', inline: true },
+      { name: '🚻 Gender', value: payload.gender || '—', inline: true },
+      { name: '🎂 Date of Birth', value: payload.dateofbirth || '—', inline: true },
+      { name: '📜 MDCN Number', value: payload.mdcnRegistrationNumber || '—', inline: true },
+      { name: '🩺 Specialty', value: payload.specialty || 'General Practitioner', inline: true },
+      { name: '⏳ Experience', value: payload.experience || '—', inline: true },
+      { name: '🏥 Affiliated Hospital', value: payload.affiliatedHospital || '—', inline: true },
+      {
+        name: '💰 Consultation Fee',
+        value: payload.consultationFee ? `₦${Number(payload.consultationFee).toLocaleString()}` : '—',
+        inline: true
+      },
+      { name: '⏱️ Session Duration', value: payload.sessionDuration || '—', inline: true },
+      { name: '📅 Available Days', value: payload.availableDaysSummary || '—', inline: true },
+      ...(payload.aboutMe
+        ? [{ name: '📝 About Doctor', value: payload.aboutMe.length > 500 ? `${payload.aboutMe.slice(0, 497)}...` : payload.aboutMe, inline: false }]
         : []),
-      { name: 'Doctor ID', value: payload.doctorId, inline: false }
+      ...(payload.appliedAt
+        ? [{ name: '📅 Applied At', value: payload.appliedAt, inline: true }]
+        : []),
+      { name: '🆔 Doctor ID', value: `\`${payload.doctorId}\``, inline: false }
     ])
     .setTimestamp(new Date())
+
+  if (payload.profileImage && (payload.profileImage.startsWith('http://') || payload.profileImage.startsWith('https://'))) {
+    embed.setThumbnail(payload.profileImage)
+  }
 
   const approveId = buildCustomId('approve', tokenId)
   const rejectId = buildCustomId('reject', tokenId)

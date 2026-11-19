@@ -11,7 +11,8 @@ import {
   restorePendingTransactionJobs,
   restorePendingTransactionExpiryJobs,
   scheduleDailyStatsJob,
-  scheduleRetentionAndFollowUpJobs
+  scheduleRetentionAndFollowUpJobs,
+  scheduleConsultationStartReminderJob
 } from "./utils/scheduler.js";
 import { getRedisUrl } from "./utils/redis.js";
 import { startRedisJobWorker } from "./utils/jobQueue.js";
@@ -148,6 +149,7 @@ async function startServer() {
       ]);
       scheduleDailyStatsJob();
       scheduleRetentionAndFollowUpJobs();
+      scheduleConsultationStartReminderJob();
     }
 
     const PORT = process.env.PORT;

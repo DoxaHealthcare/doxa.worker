@@ -8,6 +8,7 @@ import { expirePendingConsultationTransaction } from './scheduler/pendingExpiry.
 import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
 import { processDoctorInviteFollowUps } from './scheduler/doctorInviteFollowUp.js'
 import { processPatientRetentionFollowUps } from './scheduler/patientRetentionFollowUp.js'
+import { processConsultationStartReminders } from './scheduler/consultationStartReminder.js'
 import { getBullMQConnectionOptions, getRedisUrl } from './redis.js'
 
 export const SCHEDULED_JOBS_QUEUE = 'doxa-scheduled-jobs'
@@ -20,6 +21,7 @@ export type ScheduledJobName =
   | 'weekly-stats'
   | 'doctor-invite-followup'
   | 'patient-retention-followup'
+  | 'consultation-start-reminder'
 
 type SupportedJobName = ScheduledJobName
 
@@ -115,6 +117,8 @@ const processScheduledJob = async (job: Job) => {
       return processDoctorInviteFollowUps()
     case 'patient-retention-followup':
       return processPatientRetentionFollowUps()
+    case 'consultation-start-reminder':
+      return processConsultationStartReminders()
     default:
       throw new Error(`Unsupported scheduled job: ${job.name}`)
   }
@@ -224,6 +228,19 @@ export const startRedisJobWorker = async () => {
     { pattern: '*/20 * * * *', tz: 'Africa/Lagos' },
     {
       name: 'patient-retention-followup',
+      data: {},
+      opts: {
+        attempts: 1,
+        removeOnComplete: 30,
+        removeOnFail: 100
+      }
+    }
+  )
+  await queue.upsertJobScheduler(
+    'consultation-start-reminder-5m',
+    { pattern: '*/5 * * * *', tz: 'Africa/Lagos' },
+    {
+      name: 'consultation-start-reminder',
       data: {},
       opts: {
         attempts: 1,

@@ -8,6 +8,7 @@ import { expirePendingConsultationTransaction } from './scheduler/pendingExpiry.
 import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
 import { processDoctorInviteFollowUps } from './scheduler/doctorInviteFollowUp.js'
 import { processPatientRetentionFollowUps } from './scheduler/patientRetentionFollowUp.js'
+import { processConsultationStartReminders } from './scheduler/consultationStartReminder.js'
 
 const restoredJobs: Record<string, Job> = {}
 
@@ -25,6 +26,22 @@ export const scheduleRetentionAndFollowUpJobs = (): void => {
   })
 
   logger.info('Retention and Follow-Up jobs scheduled (every 20 minutes)')
+}
+
+export const scheduleConsultationStartReminderJob = (): void => {
+  // Run every 5 minutes so both the 1-hour and 15-minute doctor reminders fire on time
+  scheduleJob('*/5 * * * *', async () => {
+    logger.info('Executing scheduled consultation start reminder scan...')
+    try {
+      await processConsultationStartReminders()
+    } catch (err: any) {
+      logger.error('Error executing consultation start reminder scan:', {
+        error: err?.message || err
+      })
+    }
+  })
+
+  logger.info('Consultation start reminder job scheduled (every 5 minutes)')
 }
 
 export const scheduleDailyStatsJob = (): void => {

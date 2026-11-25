@@ -14,7 +14,8 @@ import type {
   ApprovalPayload,
   ApprovalTokenData,
   DoctorApplicationPayload,
-  WithdrawalApprovalPayload
+  WithdrawalApprovalPayload,
+  ContactUsPayload
 } from './types.js'
 
 export async function sendApprovalPrompt (
@@ -261,3 +262,40 @@ export async function sendDoctorApplicationPrompt (
 
   return { tokenId, messageId: message.id }
 }
+
+export async function sendContactUsNotification(
+  channelId: string,
+  payload: ContactUsPayload
+) {
+  const embed = new EmbedBuilder()
+    .setTitle('📩 New Contact Us Message')
+    .setColor(0x00A896)
+    .addFields([
+      { name: 'Full Name', value: payload.fullName || 'N/A', inline: true },
+      { name: 'Email', value: payload.email || 'N/A', inline: true },
+      { name: 'Subject', value: payload.subject || 'N/A', inline: false },
+      { name: 'Message', value: payload.message || 'N/A', inline: false }
+    ])
+    .setTimestamp(new Date())
+
+  let channel = discordClient.channels.cache.get(channelId)
+  if (!channel) {
+    channel = (await discordClient.channels.fetch(channelId).catch(() => null)) ?? undefined
+  }
+
+  if (!channel || !channel.isTextBased()) {
+    throw new Error(`Discord channel not found or not text-capable: ${channelId}`)
+  }
+
+  const message = await (channel as TextChannel).send({
+    embeds: [embed]
+  })
+
+  logger.info('Sent contact us notification to Discord', {
+    channelId,
+    messageId: message.id
+  })
+
+  return { messageId: message.id }
+}
+

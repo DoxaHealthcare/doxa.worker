@@ -1,5 +1,5 @@
-import type { ApprovalPayload, WithdrawalApprovalPayload, DoctorApplicationPayload } from './types.js'
-import { sendApprovalPrompt, sendWithdrawalApprovalPrompt, sendDoctorApplicationPrompt } from './prompts.js'
+import type { ApprovalPayload, WithdrawalApprovalPayload, DoctorApplicationPayload, ContactUsPayload } from './types.js'
+import { sendApprovalPrompt, sendWithdrawalApprovalPrompt, sendDoctorApplicationPrompt, sendContactUsNotification } from './prompts.js'
 import {
   registerApprovalButtonsHandler,
   registerDoctorOnboardingHandler,
@@ -112,6 +112,15 @@ export class DiscordBotService {
     return sendDoctorApplicationPrompt(payload)
   }
 
+  async notifyContactUs(payload: ContactUsPayload) {
+    const channelId = process.env.DISCORD_CONTACT_US_CHANNEL_ID?.trim()
+    if (!channelId) {
+      logger.error('Channel id not configured for contact us message')
+      return null
+    }
+    return sendContactUsNotification(channelId, payload)
+  }
+
 
 
   registerApprovalButtonsHandler() {
@@ -159,6 +168,9 @@ export class DiscordBotService {
                   break
                 case 'SEND_DOCTOR_APPLICATION_NOTIFICATION':
                   await this.sendDoctorApplicationNotification(task.payload)
+                  break
+                case 'NOTIFY_CONTACT_US':
+                  await this.notifyContactUs(task.payload)
                   break
                 default:
                   throw new Error(`Unknown Discord task type: ${task.type}`)

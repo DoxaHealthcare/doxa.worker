@@ -46,3 +46,10 @@ export type ApprovalTokenData = {
   channelId?: string
   messageId?: string
 }
+
+export type ContactUsPayload = {
+  fullName: string
+  email: string
+  subject: string
+  message: string
+}

@@ -9,28 +9,42 @@ export interface DoctorNotificationPayload {
   data?: { [key: string]: string }
 }
 
+export type NotificationRole = 'PATIENT' | 'DOCTOR'
+
 /**
- * Sends an in-app notification to a doctor and, when the doctor has registered
- * FCM tokens, a push notification too. Mirrors the backend NotificationService
- * so the worker can notify doctors without depending on the API service.
+ * Sends an in-app notification to a user and, when the user has registered
+ * FCM tokens, a push notification too.
  *
  * The notification is always persisted to the `notifications` collection
  * (history record) even if no device tokens are available.
  */
-export const sendDoctorNotification = async (
-  doctorId: string,
-  payload: DoctorNotificationPayload
+export const sendUserNotification = async (
+  userId: string,
+  payload: DoctorNotificationPayload,
+  role: NotificationRole = 'PATIENT'
 ): Promise<void> => {
   try {
-    if (!doctorId) return
+    if (!userId) return
 
     const db = getAdminFirestore()
     const notificationId = uuidv4()
+    const collectionName = role === 'PATIENT' ? 'patients' : 'doctors'
+
+    const userExists = await db
+      .collection(collectionName)
+      .doc(userId)
+      .get()
+      .then(doc => doc.exists)
+
+    if (!userExists) {
+      logger.warn('sendUserNotification: user not found', { userId, role })
+      return
+    }
 
     await db.collection('notifications').doc(notificationId).set({
       id: notificationId,
-      userId: doctorId,
-      role: 'DOCTOR',
+      userId,
+      role,
       title: payload.title,
       body: payload.body,
       data: payload.data || {},
@@ -40,12 +54,12 @@ export const sendDoctorNotification = async (
 
     const tokensSnapshot = await db
       .collection('userFCMTokens')
-      .where('userId', '==', doctorId)
+      .where('userId', '==', userId)
       .get()
 
     const tokens = tokensSnapshot.docs.map(doc => doc.id)
     if (tokens.length === 0) {
-      logger.info('sendDoctorNotification: doctor has no FCM tokens', { doctorId })
+      logger.info('sendUserNotification: user has no FCM tokens', { userId, role })
       return
     }
 
@@ -78,15 +92,27 @@ export const sendDoctorNotification = async (
       await batch.commit()
     }
 
-    logger.info('sendDoctorNotification: push dispatched', {
-      doctorId,
+    logger.info('sendUserNotification: push dispatched', {
+      userId,
+      role,
       sent: response.successCount,
       failed: response.failureCount
     })
   } catch (error: any) {
-    logger.error('sendDoctorNotification: Failed to notify doctor', {
-      doctorId,
+    logger.error('sendUserNotification: Failed to send notification', {
+      userId,
+      role,
       error: error?.message || error
     })
   }
 }
+
+export const sendDoctorNotification = (
+  doctorId: string,
+  payload: DoctorNotificationPayload
+): Promise<void> => sendUserNotification(doctorId, payload, 'DOCTOR')
+
+export const sendPatientNotification = (
+  patientId: string,
+  payload: DoctorNotificationPayload
+): Promise<void> => sendUserNotification(patientId, payload, 'PATIENT')

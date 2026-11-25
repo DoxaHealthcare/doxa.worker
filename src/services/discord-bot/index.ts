@@ -11,6 +11,8 @@ import { getAdminFirestore } from '../../utils/firebase/admin.js'
 import { updateDBAdmin } from '../../utils/firebase/admin-database.js'
 import logger from '../../utils/logger.js'
 
+import { formatDoctorName } from '../../utils/formatDoctorName.js'
+
 export class DiscordBotService {
   /**
    * Resolves a text channel from the cache, falling back to an API fetch when
@@ -45,16 +47,20 @@ export class DiscordBotService {
     }
   }
 
-  async notifyNewConsultation(data: { name: string; doctorName: string; date: string }) {
+  async notifyNewConsultation(data: { name: string; doctorName: string; date: string; time?: string }) {
     const channel = await this.getTextChannel(
       process.env.DISCORD_NEW_CONSULTATION_CHANNEL_ID,
       'new consultation message'
     )
     if (!channel) return
 
+    const doctorDisplay = formatDoctorName(data.doctorName, { fallback: 'a doctor' })
+    const timeDisplay = data.time ? ` at ${data.time} WAT` : ''
+    const dateDisplay = data.date || 'an upcoming date'
+
     return channel
       .send(
-        `${data.name} just scheduled a consultation with ${data.doctorName ? `Dr. ${data.doctorName}` : 'a doctor'} on ${data.date}. 🥳`
+        `${data.name} just scheduled a consultation with ${doctorDisplay} on ${dateDisplay}${timeDisplay}. 🥳`
       )
       .catch((err: any) => logger.error('Failed to send message:', err))
   }

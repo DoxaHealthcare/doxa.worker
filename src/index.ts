@@ -18,6 +18,7 @@ import { getRedisUrl } from "./utils/redis.js";
 import { startRedisJobWorker } from "./utils/jobQueue.js";
 import { acquireLeaderLease } from "./utils/leaderLease.js";
 import { startUnseenMessageListener } from "./services/consultation/unseenMessageListener.js";
+import { startConsultationFeedbackListener } from "./services/consultation/consultationFeedbackListener.js";
 
 // Configure logging
 const morganFormat = ":method :url :status :response-time ms";
@@ -132,6 +133,33 @@ async function startServer() {
           cleanupTasks.push(detachUnseenMessageListener);
         } else {
           logger.info("Another worker owns the unseen-messages listener lease");
+        }
+      }
+    }
+
+    {
+      const isDev = process.env.ENV === 'development'
+      const explicitlyEnabled = process.env.ENABLE_CONSULTATION_FEEDBACK_LISTENER === 'true'
+      const shouldStartListener = !isDev || explicitlyEnabled
+
+      if (!shouldStartListener) {
+        if (isDev) {
+          logger.info(
+            "Consultation feedback listener disabled in development by default. " +
+            "Set ENABLE_CONSULTATION_FEEDBACK_LISTENER=true in .env to enable."
+          )
+        }
+      } else {
+        const feedbackListenerLease = getRedisUrl()
+          ? await acquireLeaderLease("doxa:leader:consultation-feedback")
+          : async () => { };
+
+        if (feedbackListenerLease) {
+          cleanupTasks.push(feedbackListenerLease);
+          const detachFeedbackListener = await startConsultationFeedbackListener();
+          cleanupTasks.push(detachFeedbackListener);
+        } else {
+          logger.info("Another worker owns the consultation-feedback listener lease");
         }
       }
     }

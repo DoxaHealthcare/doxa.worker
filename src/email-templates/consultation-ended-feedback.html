@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Your Consultation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body
+    style="margin: 0; padding: 20px 0; font-family: 'Inter', sans-serif; background-color: #F9F9FA; line-height: 1.5; min-height: 100vh;">
+
+    <div
+        style="width: 100%; background-color: #F2F2F2; padding: 20px 0; text-align: center; max-width: 500px; margin: 0 auto 0 auto;">
+        <div style="margin: 0 auto; max-width: 530px; width: 100%;">
+            <a href="https://doxahealth.ng/" style="text-decoration: none; display: inline-block;">
+                <img src="https://doxahealth.ng/_next/image?url=%2Flogo%2Flong-logo.png&w=256&q=90" alt="Logo"
+                    style="height: 40px; width: auto; display: block; margin: 0 auto; max-width: 100%;">
+            </a>
+        </div>
+    </div>
+
+
+    <div
+        style="background-color: white; margin: 0 auto 20px auto; padding: 50px 15px 30px; width: calc(100% - 60px); max-width: 470px;">
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            Hi {{patientName}},
+        </p>
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            We hope your consultation with Dr. {{doctorName}} went well. Your feedback helps us
+            improve the care we provide and helps other patients find the right doctor.
+        </p>
+
+        <div style="width: 90%; margin: 16px auto; padding-top: 12px;">
+            <p
+                style="color: #222222; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; margin: 0 0 8px 0;">
+                Consultation Summary
+            </p>
+            <ul
+                style="list-style: none; padding: 0; margin: 0; color: #5A5A5A; font-size: 14px; font-family: 'Inter', sans-serif;">
+                <li style="margin-bottom: 6px;">Doctor: Dr. {{doctorName}}</li>
+                <li style="margin-bottom: 6px;">Date: {{consultationDate}}</li>
+                <li style="margin-bottom: 6px;">Time: {{consultationTime}} WAT</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{{reviewLink}}"
+                style="display: inline-block; background-color: #7436F5; color: #ffffff; font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif; text-decoration: none; padding: 14px 32px; border-radius: 12px;">
+                Rate your consultation
+            </a>
+        </div>
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            It only takes a few seconds — tap the button above to share your experience.
+        </p>
+
+        <p
+            style="color: #969696; font-size: 14px; width: 80%; display: flex; margin-top: 4px; font-family: 'Inter', sans-serif;">
+            Thank you for choosing Doxa Healthcare.
+        </p>
+
+        <p style="color: #969696; padding-top: 26px; font-family: 'Inter', sans-serif;">
+            Warm regards,<br />
+            The Doxa Healthcare Team
+        </p>
+
+
+    </div>
+    </div>
+</body>
+
+</html>

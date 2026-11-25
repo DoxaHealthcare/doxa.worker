@@ -142,8 +142,7 @@ const sendFeedbackPrompt = async (
     body: `How was your consultation with Dr. ${doctorName}? Leave feedback to help improve care.`,
     data: {
       type: 'consultation-feedback',
-      consultationId,
-      url: `/consultations/${consultationId}?rate=true`
+      consultationId
     }
   })
 }

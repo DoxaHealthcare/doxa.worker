@@ -9,6 +9,7 @@ import { sendDailyStats, sendWeeklyStats } from './scheduler/dailyStatsJob.js'
 import { processDoctorInviteFollowUps } from './scheduler/doctorInviteFollowUp.js'
 import { processPatientRetentionFollowUps } from './scheduler/patientRetentionFollowUp.js'
 import { processConsultationStartReminders } from './scheduler/consultationStartReminder.js'
+import { runConsultationSweep } from './scheduler/consultationSweep.js'
 
 const restoredJobs: Record<string, Job> = {}
 
@@ -42,6 +43,22 @@ export const scheduleConsultationStartReminderJob = (): void => {
   })
 
   logger.info('Consultation start reminder job scheduled (every 5 minutes)')
+}
+
+export const scheduleConsultationSweepJob = (): void => {
+  // Every 15 minutes - nudges/flags only, never changes status
+  scheduleJob('*/15 * * * *', async () => {
+    logger.info('Executing scheduled stale consultation sweep...')
+    try {
+      await runConsultationSweep()
+    } catch (err: any) {
+      logger.error('Error executing stale consultation sweep:', {
+        error: err?.message || err
+      })
+    }
+  })
+
+  logger.info('Stale consultation sweep job scheduled (every 15 minutes)')
 }
 
 export const scheduleDailyStatsJob = (): void => {

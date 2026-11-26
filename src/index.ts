@@ -12,7 +12,8 @@ import {
   restorePendingTransactionExpiryJobs,
   scheduleDailyStatsJob,
   scheduleRetentionAndFollowUpJobs,
-  scheduleConsultationStartReminderJob
+  scheduleConsultationStartReminderJob,
+  scheduleConsultationSweepJob
 } from "./utils/scheduler.js";
 import { getRedisUrl } from "./utils/redis.js";
 import { startRedisJobWorker } from "./utils/jobQueue.js";
@@ -86,6 +87,23 @@ async function startServer() {
     logger.info(`Current Server Time: ${startTime.toLocaleString()}`);
     logger.info(`Current Nigeria Time: ${nigeriaTime}`);
 
+    // Production guard: the worker's listeners/jobs act on real consultations.
+    // PM2 production starts set NODE_ENV=production via ecosystem.config.cjs;
+    // anything else pointing at the prod project must opt in explicitly.
+    if (
+      process.env.FIREBASE_PROJECT_ID === "doxa-1e19d" &&
+      process.env.NODE_ENV !== "production" &&
+      process.env.WORKER_ALLOW_PROD !== "true"
+    ) {
+      logger.error(
+        "Refusing to start: FIREBASE_PROJECT_ID is production (doxa-1e19d) " +
+          "but this process was not started as production " +
+          "(NODE_ENV!=production and WORKER_ALLOW_PROD!=true). " +
+          "Use .env.staging / pnpm dev:staging for local work."
+      );
+      process.exit(1);
+    }
+
     const app = express();
     if (process.env.DISTOKEN) {
       const discordLease = getRedisUrl()
@@ -108,7 +126,10 @@ async function startServer() {
     }
     // Initialize Firebase Admin SDK
     initializeFirebaseAdmin();
-    logger.info("Firebase Admin SDK initialized");
+    logger.info("Firebase Admin SDK initialized", {
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+      env: process.env.ENV,
+    });
 
     {
       const isDev = process.env.ENV === 'development'
@@ -178,6 +199,7 @@ async function startServer() {
       scheduleDailyStatsJob();
       scheduleRetentionAndFollowUpJobs();
       scheduleConsultationStartReminderJob();
+      scheduleConsultationSweepJob();
     }
 
     const PORT = process.env.PORT;

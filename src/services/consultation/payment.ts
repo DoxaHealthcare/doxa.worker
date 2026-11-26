@@ -4,6 +4,7 @@ import {
   updateDBAdmin
 } from '../../utils/firebase/admin-database.js'
 import { ServiceResponse } from '../../../custom-types.js'
+import { sanitizePayoutError } from '../../utils/sanitizePayoutError.js'
 
 interface WalletTransactionData {
   id: string
@@ -112,6 +113,32 @@ export class ConsultationPaymentService {
         amount
       })
 
+      // Reflect the payout outcome. Coarse status stays on the consultation
+      // for ops; sensitive detail goes to consultation-payouts which clients
+      // can never read (rules deny all).
+      await updateDBAdmin('consultations', consultationId, {
+        payoutStatus: 'paid',
+        payoutAt: timestamp
+      }).catch(err =>
+        logger.warn('approvePayment: Failed to mark consultation payoutStatus=paid', {
+          consultationId,
+          error: err?.message || err
+        })
+      )
+      await updateDBAdmin('consultation-payouts', consultationId, {
+        consultationId,
+        doctorId,
+        patientId,
+        payoutStatus: 'paid',
+        payoutAt: timestamp,
+        updatedAt: timestamp
+      }).catch(err =>
+        logger.warn('approvePayment: Failed to record consultation-payouts detail', {
+          consultationId,
+          error: err?.message || err
+        })
+      )
+
       return {
         success: true,
         data: {
@@ -198,9 +225,12 @@ export class ConsultationPaymentService {
       }
 
       // Mark transaction as failed/rejected. No wallet balance change since it was pending.
+      // rejectReason is ops free-text that reaches logs and consultation-payouts,
+      // so strip emails/long digit sequences and truncate it.
+      const safeReason = sanitizePayoutError(reason || 'Rejected')
       const update = {
         status: 'FAILED' as const, // Standardizing to FAILED instead of REJECTED if preferred, or keep as is
-        rejectReason: reason || 'Rejected',
+        rejectReason: safeReason,
         rejectedAt: timestamp,
         updatedAt: timestamp
       }
@@ -214,6 +244,29 @@ export class ConsultationPaymentService {
         walletTransactionId: (txDoc as any).id,
         reason: update.rejectReason
       })
+
+      await updateDBAdmin('consultations', consultationId, {
+        payoutStatus: 'failed'
+      }).catch(err =>
+        logger.warn('rejectPayment: Failed to mark consultation payoutStatus=failed', {
+          consultationId,
+          error: err?.message || err
+        })
+      )
+      await updateDBAdmin('consultation-payouts', consultationId, {
+        consultationId,
+        doctorId,
+        patientId,
+        payoutStatus: 'failed',
+        payoutError: `Payout rejected during review: ${update.rejectReason}`,
+        payoutFailedAt: timestamp,
+        updatedAt: timestamp
+      }).catch(err =>
+        logger.warn('rejectPayment: Failed to record consultation-payouts detail', {
+          consultationId,
+          error: err?.message || err
+        })
+      )
 
       return {
         success: true,

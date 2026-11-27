@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { createDBAdmin, updateDBAdmin, getDBAdmin } from '../../utils/firebase/admin-database.js'
+import { getAdminFirestore } from '../../utils/firebase/admin.js'
 import logger from '../../utils/logger.js'
-import { walletService } from '../wallets/index.js'
 
 type InitiateWithdrawalInput = {
   doctorId: string
@@ -163,42 +163,92 @@ export class WithdrawalService {
         return { success: false, message: 'Invalid withdrawalId' }
       }
 
-      // Verify record exists
-      const record = await getDBAdmin('withdrawals', withdrawalId)
-      if (!record.success || !record.data) {
-        logger.warn('WithdrawalService.approveWithdrawal: Withdrawal not found', {
-          requestId,
-          withdrawalId
+      const db = getAdminFirestore()
+      const withdrawalRef = db.collection('withdrawals').doc(withdrawalId)
+      const timestamp = new Date().toISOString()
+
+      // Debit the doctor wallet, mark the withdrawal PAID and write a linked
+      // journal entry atomically — mirrors the admin panel's handler so both
+      // writers behave identically (balance check, no negative wallets).
+      const outcome = await db.runTransaction(async (trx) => {
+        const withdrawalSnap = await trx.get(withdrawalRef)
+        if (!withdrawalSnap.exists) {
+          return { ok: false as const, message: 'Withdrawal not found' }
+        }
+
+        const withdrawal = withdrawalSnap.data() || {}
+        const status =
+          typeof withdrawal.status === 'string'
+            ? withdrawal.status.toUpperCase()
+            : ''
+        if (status !== 'PROCESSING' && status !== 'PENDING') {
+          return {
+            ok: false as const,
+            message: 'Withdrawal not in PROCESSING or PENDING state'
+          }
+        }
+
+        const doctorId =
+          typeof withdrawal.doctorId === 'string' ? withdrawal.doctorId : ''
+        const amount = Number(withdrawal.amount)
+        if (!doctorId || !Number.isFinite(amount) || amount <= 0) {
+          return {
+            ok: false as const,
+            message: 'Withdrawal has invalid doctor or amount data'
+          }
+        }
+
+        const walletRef = db.collection('wallets').doc(doctorId)
+        const walletSnap = await trx.get(walletRef)
+        if (!walletSnap.exists) {
+          return { ok: false as const, message: 'Doctor wallet not found' }
+        }
+        const balance = Number(walletSnap.data()?.balance ?? 0)
+        if (!Number.isFinite(balance) || balance < amount) {
+          return {
+            ok: false as const,
+            message: 'Doctor wallet balance is lower than the withdrawal amount'
+          }
+        }
+
+        const newBalance = balance - amount
+        const journalId = uuidv4()
+        trx.update(walletRef, { balance: newBalance, updatedAt: timestamp })
+        trx.update(withdrawalRef, {
+          status: 'PAID',
+          approvedAt: timestamp,
+          approvedBy: opts?.approvedBy || null,
+          approvalNote: opts?.note || null,
+          updatedAt: timestamp
         })
-        return { success: false, message: 'Withdrawal not found' }
-      }
-      if (record.data.status !== 'PROCESSING' && record.data.status !== 'PENDING') {
-        logger.warn('WithdrawalService.approveWithdrawal: Withdrawal not in PROCESSING or PENDING state', {
-          requestId,
-          withdrawalId
+        trx.set(db.collection('wallets_journal').doc(journalId), {
+          doctorId,
+          type: 'DEBIT',
+          amount,
+          previousBalance: balance,
+          newBalance,
+          source: 'withdrawal',
+          referenceId: withdrawalId,
+          note: 'External transfer confirmed via Discord',
+          createdAt: timestamp
         })
-        return { success: false, message: 'Withdrawal not in PROCESSING or PENDING state' }
+        return { ok: true as const, balance: newBalance, journalId }
+      })
+
+      if (!outcome.ok) {
+        logger.warn('WithdrawalService.approveWithdrawal: Rejected', {
+          requestId,
+          withdrawalId,
+          message: outcome.message
+        })
+        return { success: false, message: outcome.message }
       }
 
-      logger.info('WithdrawalService.approveWithdrawal: Marking withdrawal as APPROVED', {
+      logger.info('WithdrawalService.approveWithdrawal: Withdrawal approved and wallet debited', {
         requestId,
         withdrawalId,
-        approvedBy: opts?.approvedBy
-      })
-      // Deduct withdrawal amount from doctor's wallet balance using wallet service
-      const doctorId = record.data.doctorId
-      const amount = record.data.amount
-      const { success, message } = await walletService.updateBalance(doctorId, amount, 'DEBIT')
-      if (!success) {
-        throw new Error(message || 'Failed to update wallet balance')
-      }
-  
-      await updateDBAdmin('withdrawals', withdrawalId, {
-        status: 'PAID',
-        approvedAt: new Date().toISOString(),
-        approvedBy: opts?.approvedBy || null,
-        approvalNote: opts?.note || null,
-        updatedAt: new Date().toISOString(),
+        balance: outcome.balance,
+        journalId: outcome.journalId
       })
       return { success: true }
     } catch (error: any) {

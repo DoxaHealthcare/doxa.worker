@@ -92,17 +92,21 @@ export function resolveProviderTitle(
 
 /**
  * Formats a provider's display name as "<title> <clean name>".
- * Returns the fallback when there is no usable name.
+ * The title is ALWAYS derived from the provider's specialty (or `titleOverride`),
+ * defaulting to `DEFAULT_PROVIDER_TITLE` ("Dr.") — it never comes from
+ * `missingNameFallback`. `missingNameFallback` is returned only when there is
+ * no usable name. This keeps the title in a single place (the specialty map),
+ * so titles are updated by editing that map, never by hunting call sites.
  */
 export function formatProviderName(
   input?: ProviderNameInput | null,
   config: TitleConfig = SPECIALTY_DEFAULT_TITLES,
-  fallback: string = DEFAULT_PROVIDER_TITLE
+  missingNameFallback: string = DEFAULT_PROVIDER_TITLE
 ): string {
   const rawName = input?.fullName ?? input?.name
   const name = stripProviderHonorific(rawName)
-  if (!name || name === 'undefined' || name === 'null') return fallback
+  if (!name || name === 'undefined' || name === 'null') return missingNameFallback
 
-  const title = resolveProviderTitle(input, config, fallback)
+  const title = resolveProviderTitle(input, config)
   return [title, name].filter(Boolean).join(' ')
 }

@@ -81,19 +81,29 @@ export class ConsultationPaymentService {
       const walletRef = db.collection('wallets').doc(doctorId)
       const walletTxRef = db.collection('wallets-transactions').doc((txDoc as any).id)
 
-      // Ensure doctor wallet exists
+      // Ensure doctor wallet exists. If it was never activated, create it
+      // instead of dropping the payout, then flag the doctor profile.
       const walletSnap = await walletRef.get()
       if (!walletSnap.exists) {
-        logger.warn('approvePayment: Doctor wallet not activated', {
+        logger.warn('approvePayment: Doctor wallet missing, auto-creating', {
           consultationId,
           doctorId
         })
-        return { 
-          success: false, 
-          message: 'Doctor wallet not activated',
-          code: 400,
-          error: 'WALLET_NOT_ACTIVATED'
-        }
+        await walletRef.set({
+          doctorId,
+          balance: 0,
+          active: true,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        })
+        await updateDBAdmin('doctors', doctorId, {
+          isWalletActivated: true
+        }).catch(err =>
+          logger.warn('approvePayment: Failed to flag doctor wallet activation', {
+            doctorId,
+            error: err?.message || err
+          })
+        )
       }
 
       // Atomically credit wallet and mark transaction completed

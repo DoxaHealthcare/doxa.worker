@@ -3,6 +3,7 @@ import { updateDBAdmin } from '../firebase/admin-database.js'
 import logger from '../logger.js'
 import { sendEmail as sendTemplateEmail } from '../../services/emailService.js'
 import { discordBotService } from '../../services/discord-bot/index.js'
+import { formatProviderName } from '../providerTitle.js'
 
 export const sendPendingConsultationPaymentReminder = async (
   transactionId: string,
@@ -51,7 +52,7 @@ export const sendPendingConsultationPaymentReminder = async (
     const patientInfo = (patientDoc.data() as any) || {}
     const doctorInfo = (doctorDoc.data() as any) || {}
     const patientEmail = patientInfo?.email || ''
-    const doctorName = doctorInfo?.fullName || 'your doctor'
+    const doctorName = formatProviderName(doctorInfo, undefined, 'your doctor')
 
     if (!patientEmail) {
       logger.warn('Payment reminder: patient email not available', {

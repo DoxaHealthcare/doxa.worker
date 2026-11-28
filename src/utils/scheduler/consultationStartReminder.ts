@@ -2,7 +2,7 @@ import { getAdminFirestore } from '../firebase/admin.js'
 import { updateDBAdmin } from '../firebase/admin-database.js'
 import { sendEmail } from '../../services/emailService.js'
 import { discordBotService } from '../../services/discord-bot/index.js'
-import { formatDoctorName } from '../formatDoctorName.js'
+import { formatProviderName } from '../providerTitle.js'
 import { sendDoctorNotification } from '../notifications.js'
 import logger from '../logger.js'
 
@@ -111,7 +111,7 @@ export const processConsultationStartReminders = async (): Promise<void> => {
         const patientInfo = (patientDoc.data() as any) || {}
 
         const doctorEmail = String(doctorInfo?.email || doctorInfo?.doxaEmail || '').trim()
-        const doctorName = formatDoctorName(doctorInfo?.fullName, { fallback: 'Doctor' })
+        const doctorName = formatProviderName(doctorInfo, undefined, 'Doctor')
         const patientName =
           patientInfo?.fullName || patientInfo?.preferredName || 'your patient'
         const date = consultationDate || ''

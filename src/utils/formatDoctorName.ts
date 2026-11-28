@@ -1,6 +1,13 @@
 /**
- * Normalizes a doctor's name for display across emails, notifications, and logs.
- * Ensures titles like "Dr." are not duplicated and provides a clean fallback.
+ * Legacy string-only name formatter.
+ *
+ * Retained for call sites that only have a raw name string and no specialty
+ * context. New code should prefer `formatProviderName` from `providerTitle.ts`,
+ * which derives the title from the provider's specialty.
+ *
+ * This still normalizes by stripping any leading honorific so a name can never
+ * be double-prefixed, and it keeps the historical `fallback` / `withPrefix`
+ * options.
  *
  * Examples:
  *   formatDoctorName("John Doe") => "Dr. John Doe"
@@ -9,6 +16,12 @@
  *   formatDoctorName(null) => "Doctor"
  *   formatDoctorName(undefined, { fallback: 'your doctor' }) => "your doctor"
  */
+
+import {
+  DEFAULT_PROVIDER_TITLE,
+  stripProviderHonorific
+} from './providerTitle.js'
+
 export function formatDoctorName(
   fullName?: string | null,
   options?: { fallback?: string; withPrefix?: boolean }
@@ -16,26 +29,12 @@ export function formatDoctorName(
   const fallback = options?.fallback ?? 'Doctor'
   const withPrefix = options?.withPrefix ?? true
 
-  if (!fullName || typeof fullName !== 'string') {
+  const name = stripProviderHonorific(fullName)
+  if (!name || name === 'undefined' || name === 'null') {
     return fallback
   }
 
-  const trimmed = fullName.trim()
-  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') {
-    return fallback
-  }
-
-  // Remove existing "Dr." or "Dr" prefix (case insensitive) to normalize
-  const stripped = trimmed.replace(/^dr\.?\s+/i, '').trim()
-  if (!stripped) {
-    return fallback
-  }
-
-  if (withPrefix) {
-    return `Dr. ${stripped}`
-  }
-
-  return stripped
+  return withPrefix ? `${DEFAULT_PROVIDER_TITLE} ${name}` : name
 }
 
 /**

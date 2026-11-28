@@ -3,6 +3,7 @@ import { updateDBAdmin } from '../firebase/admin-database.js'
 import logger from '../logger.js'
 import { sendEmail as sendTemplateEmail } from '../../services/emailService.js'
 import { discordBotService } from '../../services/discord-bot/index.js'
+import { formatProviderName } from '../providerTitle.js'
 
 /**
  * Expire a pending consultation transaction if still pending and notify patient.
@@ -63,7 +64,7 @@ export const expirePendingConsultationTransaction = async (
     const patientInfo = (patientDoc.data() as any) || {}
     const doctorInfo = (doctorDoc.data() as any) || {}
     const patientEmail = patientInfo?.email || ''
-    const doctorName = doctorInfo?.fullName || 'your doctor'
+    const doctorName = formatProviderName(doctorInfo, undefined, 'your doctor')
 
     if (!patientEmail) {
       logger.warn('Expire: patient email not available', {

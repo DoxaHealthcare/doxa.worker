@@ -6,6 +6,7 @@ import {
 import logger from '../../utils/logger.js'
 import { sendEmail } from '../emailService.js'
 import { passwordResetService } from '../passwordReset/index.js'
+import { formatProviderName } from '../../utils/providerTitle.js'
 
 type DoctorOnboardInput = {
   email: string
@@ -108,7 +109,7 @@ export class DoctorService {
       }
 
       const targetEmail = email
-      const doctorName = (fullName || 'Doctor').trim()
+      const doctorName = formatProviderName({ fullName }, undefined, 'Doctor')
 
       const resetLink = await passwordResetService.generateResetLink(doctorId)
 

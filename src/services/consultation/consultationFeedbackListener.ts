@@ -5,7 +5,7 @@ import { sendEmail } from '../../services/emailService.js'
 import {
   sendPatientNotification
 } from '../../utils/notifications.js'
-import { formatDoctorName } from '../../utils/formatDoctorName.js'
+import { formatProviderName } from '../../utils/providerTitle.js'
 
 // Consultation statuses that mean the session has finished and the patient
 // can leave feedback.
@@ -106,7 +106,9 @@ const sendFeedbackPrompt = async (
 
   const patientName =
     patient?.preferredName || patient?.fullName || 'there'
-  const doctorName = formatDoctorName(doctor?.fullName, { fallback: 'Doctor' })
+  // `doctor` carries the specialty, so the title is derived per provider
+  // instead of being hardcoded — and never duplicated.
+  const doctorName = formatProviderName(doctor, undefined, 'Doctor')
   const patientEmail = String(
     patient?.email || patient?.doxaEmail || ''
   ).trim()
@@ -119,7 +121,7 @@ const sendFeedbackPrompt = async (
   if (patientEmail) {
     await sendEmail(
       patientEmail,
-      `How was your consultation with Dr. ${doctorName}?`,
+      `How was your consultation with ${doctorName}?`,
       'consultation-ended-feedback',
       {
         patientName,
@@ -139,7 +141,7 @@ const sendFeedbackPrompt = async (
 
   await sendPatientNotification(patientId, {
     title: 'How was your consultation?',
-    body: `How was your consultation with Dr. ${doctorName}? Leave feedback to help improve care.`,
+    body: `How was your consultation with ${doctorName}? Leave feedback to help improve care.`,
     data: {
       type: 'consultation-feedback',
       consultationId
